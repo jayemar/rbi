@@ -41,18 +41,24 @@ def scale_2d(matrix, height=None, width=None):
     return cv2.resize(matrix, dim, interpolation=cv2.INTER_AREA)
 
 
-def show_primary(matrix, color="blue"):
-    if _color_check(color):
-        channels = _get_channels(matrix)
+def show_primary(matrix, color, single_channel=False):
+    if __color_check(color):
+        channels = __get_channels(matrix)
         for c in color_dict[color]:
             channels[c] = np.zeros(channels[c].shape, dtype="uint8")
-        return cv2.merge(channels)
+
+        resp = np.array([])
+        if (single_channel):
+            resp = channels[__get_color_index(color)]
+        else:
+            resp = cv2.merge(channels)
+        return resp
 
 
 def remove_primary(matrix, color="blue"):
-    if _color_check(color):
-        channels = _get_channels(matrix)
-        p_index = _get_color_index(color)
+    if __color_check(color):
+        channels = __get_channels(matrix)
+        p_index = __get_color_index(color)
         channels[p_index] = np.zeros(channels[p_index].shape, dtype="uint8")
         return cv2.merge(channels)
 
@@ -60,16 +66,16 @@ def remove_primary(matrix, color="blue"):
 def get_perspective(frame):
     frame = show_primary(frame, 'blue')
 
-def _get_channels(matrix, color=None):
+def __get_channels(matrix, color=None):
     if color is not None and color not in color_dict.keys():
         raise ValueError("Color must be one of %s" % color_dict.keys())
     return cv2.split(matrix)
 
-def _color_check(color=None):
+def __color_check(color=None):
     if color is not None and color not in color_dict.keys():
         raise ValueError("Color must be one of %s" % color_dict.keys())
     else:
         return True
 
-def _get_color_index(color):
+def __get_color_index(color):
     return list(set([0,1,2]) - set(color_dict[color])).pop()
