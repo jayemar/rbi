@@ -1,3 +1,4 @@
-*.swp
-*.~
+src/*.swp
+src/*.~
+src/*.pyc
 FCEUX_Learning_Environment
