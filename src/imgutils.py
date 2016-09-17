@@ -4,6 +4,7 @@ import cv2
 import pdb
 import numpy as np
 
+color_dict = {'red': [0, 1], 'green': [0, 2], 'blue': [1, 2]}
 
 def scale_2d(matrix, height=None, width=None):
     if len(matrix.shape) != 2:
@@ -39,3 +40,36 @@ def scale_2d(matrix, height=None, width=None):
     dim = tuple(map(lambda x: int(x), dim))
     return cv2.resize(matrix, dim, interpolation=cv2.INTER_AREA)
 
+
+def show_primary(matrix, color="blue"):
+    if _color_check(color):
+        channels = _get_channels(matrix)
+        for c in color_dict[color]:
+            channels[c] = np.zeros(channels[c].shape, dtype="uint8")
+        return cv2.merge(channels)
+
+
+def remove_primary(matrix, color="blue"):
+    if _color_check(color):
+        channels = _get_channels(matrix)
+        p_index = _get_color_index(color)
+        channels[p_index] = np.zeros(channels[p_index].shape, dtype="uint8")
+        return cv2.merge(channels)
+
+
+def get_perspective(frame):
+    frame = show_primary(frame, 'blue')
+
+def _get_channels(matrix, color=None):
+    if color is not None and color not in color_dict.keys():
+        raise ValueError("Color must be one of %s" % color_dict.keys())
+    return cv2.split(matrix)
+
+def _color_check(color=None):
+    if color is not None and color not in color_dict.keys():
+        raise ValueError("Color must be one of %s" % color_dict.keys())
+    else:
+        return True
+
+def _get_color_index(color):
+    return list(set([0,1,2]) - set(color_dict[color])).pop()
