@@ -20,6 +20,7 @@ max_width = None
 step_count = 0
 FRAME_SIZE = 200
 ratio = 1.0
+screenCnt = None
 
 while(True):
     step_count += 1
@@ -32,24 +33,29 @@ while(True):
     # Convert to gray scale
     #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     #hsv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-    frame = imgutils.show_primary(frame, 'blue')
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    blue_frame = imgutils.show_primary(orig, 'blue', True)
+    blue_orig = blue_frame.copy()
+    _, blue_frame = cv2.threshold(blue_frame, 50, 200, cv2.THRESH_BINARY)
+
+    gray = blue_frame
+
 
     # Resize; starts @ 480 x 640
     #gray = imgutils.scale_2d(gray, height=FRAME_SIZ)
 
     # TODO: This doesn't need to be done if we've found the TV
     # Filter and Edge detection
-    gray = cv2.bilateralFilter(gray, 11, 17, 17)
-    #edged = cv2.Canny(gray, 30, 200)
-    edged = cv2.Canny(gray, 0, 30, 4)    # Adopted from my C++ stuff
+    blurred = cv2.bilateralFilter(gray, 11, 17, 17)
+    gray = blurred
+    edged = cv2.Canny(blue_frame, 30, 200)
+    #edged = cv2.Canny(blue_frame, 0, 30, 4)    # Adopted from my C++ stuff
 
     if good_M is None:
         # Find the 10 largest Contours
         (cnts, _) = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:10]
-        screenCnt = None
 
         # Assume the largest Contour is the one we want
         for c in cnts:
@@ -57,6 +63,7 @@ while(True):
             peri = cv2.arcLength(c, True)
             approx = cv2.approxPolyDP(c, 0.02 * peri, True)
 
+            screenCnt = approx
             # if our approximate contour has 4 points then we can
             # assume that we have the right one
             if len(approx) == 4 and approx.sum() == np.unique(approx).sum():
@@ -115,6 +122,7 @@ while(True):
         max_height = maxHeight
 
     # FIXME: This is for debugging only
+    """
     if maxWidth < orig.shape[1] * 0.25 or maxHeight < orig.shape[0] * 0.25 \
             or maxWidth < maxHeight:
         good_M = None
@@ -122,19 +130,23 @@ while(True):
         max_height = None
 
         print
-        print("ratio:     %s" % str(ratio))
         print("maxWidth:  %s" % str(maxWidth))
         print("maxHeight: %s" % str(maxHeight))
-        #print("rect: %s" % str(rect)) # rect.shape is (4,2)
-        pp(rect)
+        #pp(rect)
         continue
+    """
 
 
     # Display the results
     if screenCnt is not None:
-        cv2.drawContours(frame, [screenCnt], -1, (0, 0, 255), 3)
+        cv2.drawContours(frame, [screenCnt], -1, (0, 255, 0), 3)
+    else:
+        print("Good Contour not found")
     cv2.imshow('R.B.I. Baseball - Original', frame)
+    #cv2.imshow('R.B.I. Baseball - Blue Threshold', blue_frame)
+    #cv2.imshow('R.B.I. Baseball - Blue Original', blue_orig)
 
+    cv2.imshow('R.B.I. Baseball - Blurred', blurred)
     cv2.imshow('R.B.I. Baseball - Contours', edged)
 
     # Warp the perspective to grab the screen
