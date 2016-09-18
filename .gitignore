@@ -1,4 +1,5 @@
 src/*.swp
 src/*.~
 src/*.pyc
+src/__pycache__
 FCEUX_Learning_Environment
