@@ -49,9 +49,9 @@ class Perspective:
 
 
     def get_perspective(self, frame):
-        screenCnt = False
-        while screenCnt is False:
-            screenCnt = self.__get_screen_contour(frame)
+        screenCnt = self.__get_screen_contour(frame)
+        if screenCnt is False:
+            return False
 
         # Determine corners of Contour
         #print("DEBUG - Countour shape: %s" % str(screenCnt.shape))
@@ -59,6 +59,8 @@ class Perspective:
             pts = screenCnt.reshape(4, 2)
         except ValueError:
             print("ERROR - Countour shape: %s" % str(screenCnt.shape))
+            raise 
+
         rect = np.zeros((4, 2), dtype="float32")
 
         # the top-left point has the smallest sum whereas
@@ -124,14 +126,21 @@ class Perspective:
             peri = cv2.arcLength(c, True)
             approx = cv2.approxPolyDP(c, 0.02 * peri, True)
 
-            screenCnt = approx
             # if our approximate contour has 4 points then we can
             # assume that we have the right one
-            if len(approx) == 4 and approx.sum() == np.unique(approx).sum() and approx.shape[0] == 4:
+            if (len(approx) == 4)                        and \
+               (approx.sum() == np.unique(approx).sum()) and \
+               (approx.shape[0] == 4)                    and \
+               (cv2.contourArea(approx) > (reduce(lambda x, y: x*y, blue_frame.shape)/4)):
                 screenCnt = approx
+                print("DEBUG - Found screenCnt")
                 break
 
-        return False if screenCnt is None else screenCnt
+        #return False if screenCnt is None else screenCnt
+        if screenCnt is None:
+            return False
+        else:
+            return screenCnt
 
 
     def __get_channels(self, matrix, color):

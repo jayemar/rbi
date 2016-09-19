@@ -14,6 +14,7 @@ from pprint import pprint as pp
 camera = camutils.Camera()
 feed = camera.get_feed()
 
+P = Perspective.Perspective()
 good_M = None
 max_height = None
 max_width = None
@@ -39,14 +40,17 @@ while(True):
     if not ret: continue
     orig = frame.copy()
 
-    P = Perspective.Perspective()
-    p = P.get_perspective(frame)
+    if (good_M, max_height, max_width) == (None,None,None):
+        p = P.get_perspective(frame)
+        if not p:
+            continue
 
-    screenCnt = p['c']
-    M = p['M']
-    max_width = p['w']
-    max_height = p['h']
+        screenCnt = p['c']
+        M = p['M']
+        max_width = p['w']
+        max_height = p['h']
 
+    """
     # Display the results
     if screenCnt is not None:
         print("Contour area: %s" % str(cv2.contourArea(screenCnt)))
@@ -57,6 +61,7 @@ while(True):
 
     nn_matrix = prepare_nn_matrix(frame)
     cv2.imshow('R.B.I. Baseball - Scaled', nn_matrix)
+    """
 
     # Warp the perspective to grab the screen
     warp = cv2.warpPerspective(orig, M, (max_width, max_height))
