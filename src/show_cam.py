@@ -25,21 +25,17 @@ ratio = 1.0
 screenCnt = None
 
 
-def show_blue(f):
-    #f = cv2.inRange(f, (100, 0, 255), (255, 255, 255))
-
-    cv2.cvtColor(f, cv2.COLOR_BGR2HSV, dst=f)
-    #f = cv2.inRange(f, (100, 0, 100), (255, 255, 255))
-
+def show_blue(f, tolerance=0.10):
+    #cv2.cvtColor(f, cv2.COLOR_BGR2HSV, dst=f)
     #cv2.cvtColor(f, cv2.COLOR_BGR2HLS, dst=f)
-    #f = cv2.inRange(f, (0, 100, 100), (255, 255, 255))
 
-
-
+    f = imgutils.get_color_mask(f, "052C72", tolerance)
     return f
+
 
 def angle2hex(a):
     return (a/360.0) * 255
+
 
 while(True):
     step_count += 1
@@ -48,9 +44,15 @@ while(True):
     ret, frame = feed.read()
     if not ret: continue
 
-    frame = show_blue(frame)
+    mask = show_blue(frame, 0.25)
+    cv2.imshow('Blue Mask', mask)
 
-    cv2.imshow('Camera View', frame)
+    #blurred = cv2.bilateralFilter(mask, 11, 17, 17)
+    blurred = cv2.bilateralFilter(mask, 21, 27, 27)
+    cv2.imshow('Blurred', blurred)
+
+    edged = cv2.Canny(blurred, 30, 200)
+    cv2.imshow('Edged', edged)
 
     if cv2.waitKey(1) & 0xFF == ord('1'):
         break
