@@ -38,8 +38,17 @@ arg_dict = vars(ap.parse_args())
 
 
 class RBI:
-    def __init__(self, log_level=logging.DEBUG):
-        self.__configure_logger(log_level)
+    def __init__(self, log_level="INFO"):
+        try:
+            self.__configure_logger(eval("logging." + log_level.upper()))
+        except AttributeError, err:
+            if log_level is None:
+                self.__configure_logger(logging.INFO)
+            else:
+                self.__configure_logger(logging.DEBUG)
+                self._log.warn("Unable to configure logger with value '" +
+                        str(log_level) + "'\n")
+
         self.__configure_camera()
         self.__configure_serial()
 
@@ -58,17 +67,17 @@ class RBI:
         self.camera = camutils.Camera()
         self.feed = self.camera.get_feed()
         
-        print("Current Brightness: %s" % str(self.camera.get_brightness()))
-        print("Current Focus     : %s" % str(self.camera.get_focus()))
+        self._log.debug("Current Brightness    : %s" % str(self.camera.get_brightness()))
+        self._log.debug("Current Focus         : %s" % str(self.camera.get_focus()))
 
         cam_cfg = json.load(open('../camera.cfg'))
-        print("Setting Brightness to %s" % str(cam_cfg['Brightness']))
-        print("Setting Focus to      %s" % str(cam_cfg['Focus']))
+        self._log.debug("Setting Brightness to : %s" % str(cam_cfg['Brightness']))
+        self._log.debug("Setting Focus to      : %s" % str(cam_cfg['Focus']))
         self.camera.set_brightness(int(cam_cfg['Brightness']))
         self.camera.set_focus(int(cam_cfg['Focus']))
 
-        print("Current Brightness: %s" % str(self.camera.get_brightness()))
-        print("Current Focus     : %s" % str(self.camera.get_focus()))
+        self._log.debug("Current Brightness    : %s" % str(self.camera.get_brightness()))
+        self._log.debug("Current Focus         : %s" % str(self.camera.get_focus()))
 
 
     def __configure_serial(self):
@@ -103,6 +112,7 @@ class RBI:
 
 
 if __name__ == '__main__':
-    rbi = RBI()
+    # Deal with command line arguments
+    rbi = RBI(arg_dict['loglevel'])
     #rbi.calibrate_camera()
 
