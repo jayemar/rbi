@@ -47,8 +47,7 @@ while(True):
     mask = show_blue(frame, 0.25)
     cv2.imshow('Blue Mask', mask)
 
-    #blurred = cv2.bilateralFilter(mask, 11, 17, 17)
-    blurred = cv2.bilateralFilter(mask, 21, 27, 27)
+    blurred = cv2.bilateralFilter(mask, 11, 17, 17)
     cv2.imshow('Blurred', blurred)
 
     edged = cv2.Canny(blurred, 30, 200)

@@ -1,4 +1,0 @@
-uvcdynctrl
-
-Focus:          2
-Brightness:     40

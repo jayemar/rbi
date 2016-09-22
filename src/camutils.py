@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+"""
+Uses the 'uvcdynctrl' utility to control an attached USB webcam
+"""
+
 import cv2
 import numpy
 import subprocess
@@ -24,25 +28,25 @@ class Camera:
 
 
     def get_brightness(self):
-        self.__uvc("Brightness")
+        return self.__uvc("Brightness").strip()
 
     def set_brightness(self, b):
         self.__uvc("Brightness", b)
 
     def get_contrast(self):
-        self.__uvc("Contrast")
+        return self.__uvc("Contrast").strip()
 
     def set_contrast(self, b):
         self.__uvc("Contrast", b)
 
     def get_saturation(self):
-        self.__uvc("Saturation")
+        return self.__uvc("Saturation").strip()
 
     def set_saturation(self, b):
         self.__uvc("Saturation", b)
 
     def get_focus(self):
-        self.__uvc("Focus (absolute)")
+        return self.__uvc("Focus (absolute)").strip()
 
     def set_focus(self, b):
         self.__uvc("Focus, Auto", 0)
@@ -53,7 +57,7 @@ class Camera:
 
 
     def get_sharpness(self):
-        self.__uvc("Sharpness")
+        return self.__uvc("Sharpness").strip()
 
     def set_sharpness(self, b):
         self.__uvc("Sharpness", b)
@@ -61,8 +65,8 @@ class Camera:
 
     def __uvc(self, cmd, val=None):
         if val:
-            resp = subprocess.call(["uvcdynctrl", "-s", cmd, str(val)])
+            resp = subprocess.check_output(["uvcdynctrl", "-s", cmd, str(val)])
         else:
-            resp = subprocess.call(["uvcdynctrl", "-g", cmd])
+            resp = subprocess.check_output(["uvcdynctrl", "-g", cmd])
         return resp
 
