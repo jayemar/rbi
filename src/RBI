@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-import Camera
+import camera
+import arduino
 import camutils
 import imgutils
 
 import cv2
 import numpy as np
-import serial
 import json
 
 import time
@@ -66,7 +66,7 @@ class RBI:
 
 
     def __configure_camera(self):
-        self.camera = Camera.Camera()
+        self.camera = camera.Camera()
         self.feed = self.camera.get_feed()
         
         self._log.debug("Current Brightness    : %s" % str(self.camera.get_brightness()))
@@ -83,9 +83,8 @@ class RBI:
 
 
     def __configure_serial(self):
-        self.arduino = serial.Serial(port='/dev/ttyACM0',
-                baudrate=57600)
-        self.arduino.write('0\r\n')
+        self.arduino = arduino.Arduino(port='/dev/ttyACM0', baudrate=57600)
+        self.arduino.write('0')
 
 
     # TODO: Not sure this will actually ever get called

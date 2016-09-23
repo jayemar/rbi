@@ -47,22 +47,6 @@ def get_color_mask(matrix, color_hex, tolerance=0.10):
     return mask
 
 
-def __get_color_min_max(color_hex, tolerance=0.10):
-    if (len(color_hex) != 6):
-        raise ValueError("The color must be a 6-digit hex value in RGB form")
-
-    t_diff = int(tolerance * 255)
-
-    # TODO: Find a more pythonic way to write this
-    min_R = int(color_hex[0:2], 16) - t_diff
-    min_G = int(color_hex[2:4], 16) - t_diff
-    min_B = int(color_hex[4:6], 16) - t_diff
-    max_R = int(color_hex[0:2], 16) + t_diff
-    max_G = int(color_hex[2:4], 16) + t_diff
-    max_B = int(color_hex[4:6], 16) + t_diff
-
-    return ((min_B, min_G, min_R), (max_B, max_G, max_R))
-
 def show_primary(matrix, color, single_channel=False):
     if __color_check(color):
         channels = __get_channels(matrix)
@@ -87,6 +71,24 @@ def remove_primary(matrix, color="blue"):
 
 def get_perspective(frame):
     frame = show_primary(frame, 'blue')
+
+
+def __get_color_min_max(color_hex, tolerance=0.10):
+    if (len(color_hex) != 6):
+        raise ValueError("The color must be a 6-digit hex value in RGB form")
+
+    t_diff = int(tolerance * 255)
+
+    # TODO: Find a more pythonic way to write this
+    min_R = int(color_hex[0:2], 16) - t_diff
+    min_G = int(color_hex[2:4], 16) - t_diff
+    min_B = int(color_hex[4:6], 16) - t_diff
+    max_R = int(color_hex[0:2], 16) + t_diff
+    max_G = int(color_hex[2:4], 16) + t_diff
+    max_B = int(color_hex[4:6], 16) + t_diff
+
+    return ((min_B, min_G, min_R), (max_B, max_G, max_R))
+
 
 def __get_channels(matrix, color=None):
     if color is not None and color not in color_dict.keys():
