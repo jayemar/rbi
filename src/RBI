@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
+import Camera
 import camutils
 import imgutils
-import Perspective
 
 import cv2
 import numpy as np
@@ -26,6 +26,8 @@ screenCnt = None
 
 """ USAGE INFORMATION """
 ap = argparse.ArgumentParser()
+ap.add_argument("-t", "--train", required=False,
+        help="Operate in training mode", action="store_true")
 ap.add_argument("-o", "--original", required=False,
         help="Show the Original unwarped/unscaled Image", action="store_true")
 ap.add_argument("-c", "--contour", required=False,
@@ -41,7 +43,7 @@ class RBI:
     def __init__(self, log_level="INFO"):
         try:
             self.__configure_logger(eval("logging." + log_level.upper()))
-        except AttributeError, err:
+        except AttributeError:
             if log_level is None:
                 self.__configure_logger(logging.INFO)
             else:
@@ -64,7 +66,7 @@ class RBI:
 
 
     def __configure_camera(self):
-        self.camera = camutils.Camera()
+        self.camera = Camera.Camera()
         self.feed = self.camera.get_feed()
         
         self._log.debug("Current Brightness    : %s" % str(self.camera.get_brightness()))
@@ -91,7 +93,7 @@ class RBI:
         try:
             self.feed.release()
             cv2.destroyAllWindows()
-        except AttributeError, e:
+        except AttributeError:
             #self._log.info("Closing Log")
             #print(e)
             pass
