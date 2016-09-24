@@ -23,8 +23,6 @@ MATRIX_WIDTH = 128
 ratio = 1.0
 screenCnt = None
 
-view_map = { 'original': False, 'edges': False, 'neural': False }
-
 
 """ USAGE INFORMATION """
 ap = argparse.ArgumentParser()
@@ -33,9 +31,13 @@ ap.add_argument("-t", "--train", required=False,
 ap.add_argument("-c", "--calibrate", required=False,
         help="Calibrate camera prior to running program", action="store_true")
 ap.add_argument("-o", "--original", required=False,
-        help="Show the Original unwarped/unscaled Image", action="store_true")
+        help="Show the Original unwarped/unscaled image", action="store_true")
+ap.add_argument("-m", "--mask", required=False,
+        help="Show the color Masked Image", action="store_true")
 ap.add_argument("-e", "--edges", required=False,
         help="Show Edges/Contours on original image", action="store_true")
+ap.add_argument("-w", "--warped", required=False,
+        help="Show the Warped (perspective shifted) image", action="store_true")
 ap.add_argument("-n", "--neural", required=False,
         help="Show the Image to be passed to the Neural Network", action="store_true")
 ap.add_argument("-l", "--loglevel", required=False,
@@ -58,17 +60,31 @@ class RBI:
         self.__configure_camera()
         self.__configure_serial()
 
-        self.warp = {'M': None,
-                'height': None,
-                'width': None}
 
-    def loop(self, perspective, view_map):
+    def loop(self, perspective, img_map=False):
         while(True):
             success, frame = self.feed.read()
-            cv2.imshow("My Frame", frame)
+
+            if img_map and img_map['original']:
+                cv2.imshow("My Frame", frame)
+
+            warp = self.warp_frame(frame, perspective, img_map)
+
             if cv2.waitKey(1) & 0xFF == ord('1'):
                 break
 
+
+    def warp_frame(self, frame, perspective, img_map=False):
+        M = perspective['M']
+        height = perspective['h']
+        width = perspective['w']
+        c = perspective['c']
+        warped = cv2.warpPerspective(frame, M, (width, height))
+        
+        if img_map and img_map['warped']:
+            cv2.imshow('Warped', warped)
+
+        return warped
 
     def __configure_logger(self, log_level):
         logging.basicConfig(level=log_level)
@@ -102,10 +118,15 @@ class RBI:
 
 
 if __name__ == '__main__':
+    # Determines which intermediate frames will be shown
+    img_map = arg_dict
+
     rbi = RBI(arg_dict['loglevel'])
     if arg_dict['calibrate']:
-        camutils.calibrate_camera(rbi.feed)
-    perspective = camutils.get_perspective(rbi.feed, BLUE_HEX, 0.25)
-    rbi._log.info("We have a perspective")
-    rbi.loop(perspective, view_map)
+        camutils.calibrate_camera(rbi.feed, img_map)
+
+    perspective = camutils.get_perspective(rbi.feed, BLUE_HEX, 0.25, img_map)
+
+    cv2.destroyAllWindows()
+    rbi.loop(perspective, img_map)
 

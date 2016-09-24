@@ -8,7 +8,7 @@ import pdb
 import imgutils
 
 
-primay_color_dict = {'red':   [0, 1], 'green': [0, 2], 'blue':  [1, 2]}
+img_map = {'original': False, 'mask': False, 'edges': False, 'neural': False}
 
 def scale_2d(orig_matrix, height=None, width=None):
     matrix = orig_matrix.copy()
@@ -46,11 +46,12 @@ def scale_2d(orig_matrix, height=None, width=None):
     return cv2.resize(matrix, dim, interpolation=cv2.INTER_AREA)
 
 
-def get_perspective(feed, hex_color, tolerance=0.10):
+def get_perspective(feed, hex_color, tolerance=0.10, img_map=False):
     screenCnt = None
     while screenCnt is None:
         success, frame = feed.read()
-        screenCnt = __get_screen_contour(frame, hex_color, tolerance=tolerance)
+        screenCnt = __get_screen_contour(frame, hex_color,
+                tolerance=tolerance, img_map=False)
 
     # Determine corners of Contour
     try:
@@ -105,28 +106,34 @@ def get_perspective(feed, hex_color, tolerance=0.10):
     return {'w': maxWidth, 'h': maxHeight, 'M': M, 'c': screenCnt}
 
 
-def calibrate_camera(feed, max_time_sec=120, known_word="Welcome"):
+def calibrate_camera(feed, max_time_sec=120, known_word="Welcome",
+        img_map=False):
     start_time = time.time()
     while(True):
         success, frame = feed.read()
         print("Frame Mean: %f" % np.mean(frame))
 
-def __get_screen_contour(frame, hex_color, tolerance):
+
+def __get_screen_contour(frame, hex_color, tolerance, img_map=False):
     #blue_frame = imgutils.show_primary(frame.copy(), 'blue', True)
     #blue_orig = blue_frame.copy()
     #_, thresh_frame = cv2.threshold(blue_frame, 50, 200, cv2.THRESH_BINARY)
     #blurred = cv2.bilateralFilter(thresh_frame, 11, 17, 17)
 
+    if img_map and img_map['original']:
+        cv2.imshow('Original', frame)
+
     mask = imgutils.get_color_mask(frame, hex_color, tolerance)
-    cv2.imshow('Blue Mask', mask)
+    if img_map and img_map['mask']:
+        cv2.imshow('Mask', mask)
 
     blurred = cv2.bilateralFilter(mask, 11, 17, 17)
-    cv2.imshow('Blurred', blurred)
 
-    edged = cv2.Canny(blurred, 30, 200)
-    cv2.imshow('Edged', edged)
+    edges = cv2.Canny(blurred, 30, 200)
+    if img_map and img_map['edges']:
+        cv2.imshow('Edges', edges)
 
-    (cnts, _) = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    (cnts, _) = cv2.findContours(edges.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:10]
 
     # Assume the largest Contour is the one we want
@@ -147,7 +154,6 @@ def __get_screen_contour(frame, hex_color, tolerance):
             break
         else:
             print("Contour area: %f" % cv2.contourArea(approx))
-            cv2.imshow("Perspective Attempt", edged)
             if cv2.waitKey(1) & 0xFF == ord('1'):
                 break
     

@@ -7,28 +7,13 @@ from lib import imgutils
 import cv2
 import numpy as np
 import pdb
-import time
 
 from pprint import pprint as pp
 
 camera = camera.Camera()
 feed = camera.get_feed()
 
-good_M = None
-max_height = None
-max_width = None
-
-step_count = 0
-MATRIX_HEIGHT = 84
-MATRIX_WIDTH = 84
-ratio = 1.0
-screenCnt = None
-
-
 while(True):
-    step_count += 1
-
-    # Capture frame-by-frame
     ret, frame = feed.read()
     if not ret: continue
 
@@ -38,10 +23,10 @@ while(True):
     cv2.imshow('Blue Mask', mask)
 
     blurred = cv2.bilateralFilter(mask, 11, 17, 17)
-    cv2.imshow('Blurred', blurred)
+    #cv2.imshow('Blurred', blurred)
 
     edged = cv2.Canny(blurred, 30, 200)
-    cv2.imshow('Edged', edged)
+    #cv2.imshow('Edged', edged)
 
     key = cv2.waitKey(1) & 0xFF
     if key == ord('1'):

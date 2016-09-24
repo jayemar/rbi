@@ -1,6 +1,7 @@
 src/*.swp
 src/*.~
-src/*.pyc
 src/__pycache__
+src/*.pyc
+src/lib/*.pyc
 roms/fceux
 FCEUX_Learning_Environment
