@@ -12,8 +12,9 @@ import json
 import time
 import argparse
 import logging
-import pdb
 
+import pdb
+import inspect, os
 from pprint import pprint as pp
 
 
@@ -58,7 +59,7 @@ class RBI:
                         str(log_level) + "'\n")
 
         self.__configure_camera()
-        self.__configure_serial()
+        self.__configure_arduino()
 
 
     def loop(self, perspective, img_map=False):
@@ -95,17 +96,18 @@ class RBI:
         self.camera = camera.Camera()
         self.feed = self.camera.get_feed()
         
-        cam_cfg = json.load(open('../camera.cfg'))
+        directory = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+        cam_cfg = json.load(open(directory + '/../camera.cfg'))
         self.camera.set_brightness(int(cam_cfg['Brightness']))
         self.camera.set_focus(int(cam_cfg['Focus']))
         self._log.debug("Brightness set to %s" % str(self.camera.get_brightness()))
         self._log.debug("Focus set to %s" % str(self.camera.get_focus()))
 
 
-    def __configure_serial(self, port='/dev/ttyACM0', baudrate=57600):
+    def __configure_arduino(self, port='/dev/ttyACM0', baudrate=57600):
         self.arduino = arduino.Arduino(port=port, baudrate=baudrate)
         self._log.debug("Configured Arduino on port %s, baudrate %d" % (port, baudrate))
-        self.arduino.write('1')
+        self.arduino.write('0')
 
 
     # TODO: Not sure this will actually ever get called
@@ -122,10 +124,12 @@ if __name__ == '__main__':
     img_map = arg_dict
 
     rbi = RBI(arg_dict['loglevel'])
+    
     if arg_dict['calibrate']:
         camutils.calibrate_camera(rbi.feed, img_map)
 
     perspective = camutils.get_perspective(rbi.feed, BLUE_HEX, 0.25, img_map)
+    rbi.arduino.write('1')
 
     cv2.destroyAllWindows()
     rbi.loop(perspective, img_map)
