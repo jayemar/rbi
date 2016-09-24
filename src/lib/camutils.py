@@ -106,8 +106,7 @@ def get_perspective(feed, hex_color, tolerance=0.10, img_map=False):
     return {'w': maxWidth, 'h': maxHeight, 'M': M, 'c': screenCnt}
 
 
-def calibrate_camera(feed, max_time_sec=120, known_word="Welcome",
-        img_map=False):
+def calibrate_camera(feed, max_time_sec=120, known_word="Welcome", img_map=False):
     start_time = time.time()
     while(True):
         success, frame = feed.read()
@@ -150,10 +149,10 @@ def __get_screen_contour(frame, hex_color, tolerance, img_map=False):
            (approx.shape[0] == 4)                    and \
            (cv2.contourArea(approx) >= (reduce(lambda x, y: x*y, mask.shape)/4)):
             screenCnt = approx
-            print("DEBUG - Found screenCnt")
+            #print("DEBUG - Found screenCnt")
             break
         else:
-            print("Contour area: %f" % cv2.contourArea(approx))
+            #print("Contour area: %f" % cv2.contourArea(approx))
             if cv2.waitKey(1) & 0xFF == ord('1'):
                 break
     

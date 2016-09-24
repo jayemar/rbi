@@ -19,10 +19,8 @@ from pprint import pprint as pp
 
 
 BLUE_HEX = "052C72"
-MATRIX_HEIGHT = 128
-MATRIX_WIDTH = 128
-ratio = 1.0
-screenCnt = None
+MATRIX_HEIGHT = 84
+MATRIX_WIDTH = 84
 
 
 """ USAGE INFORMATION """
@@ -69,23 +67,37 @@ class RBI:
             if img_map and img_map['original']:
                 cv2.imshow("My Frame", frame)
 
-            warp = self.warp_frame(frame, perspective, img_map)
+            warped = self.warp_frame(frame, perspective)
+            if img_map and img_map['warped']:
+                cv2.imshow('Warped', warped)
+
+            nn_frame = self.prepare_nn_frame(warped, MATRIX_HEIGHT, MATRIX_WIDTH)
+            print("DEBUG - nn_frame.shape = %s" % str(nn_frame.shape))
+            if img_map and img_map['neural']:
+                cv2.imshow('NN', nn_frame)
+
+            nn_vector = nn_frame.ravel()
 
             if cv2.waitKey(1) & 0xFF == ord('1'):
                 break
 
 
-    def warp_frame(self, frame, perspective, img_map=False):
+    def warp_frame(self, frame, perspective):
         M = perspective['M']
         height = perspective['h']
         width = perspective['w']
         c = perspective['c']
         warped = cv2.warpPerspective(frame, M, (width, height))
         
-        if img_map and img_map['warped']:
-            cv2.imshow('Warped', warped)
-
         return warped
+
+
+    def prepare_nn_frame(self, frame, height=None, width=None):
+        grayed = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        scaled = cv2.resize(frame, (height, width))
+        #scaled = imgutils.scale_2d(grayed, height, width)
+        return grayed
+
 
     def __configure_logger(self, log_level):
         logging.basicConfig(level=log_level)
