@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 import cv2
-import pdb
+import time
 import numpy as np
+import pdb
 
 import imgutils
 
@@ -45,12 +46,11 @@ def scale_2d(orig_matrix, height=None, width=None):
     return cv2.resize(matrix, dim, interpolation=cv2.INTER_AREA)
 
 
-def get_perspective(orig_frame):
-    frame = orig_frame.copy()
-
-    screenCnt = __get_screen_contour(frame)
-    if screenCnt is False:
-        return False
+def get_perspective(feed, hex_color, tolerance=0.10):
+    screenCnt = None
+    while screenCnt is None:
+        success, frame = feed.read()
+        screenCnt = __get_screen_contour(frame, hex_color, tolerance=tolerance)
 
     # Determine corners of Contour
     try:
@@ -105,14 +105,26 @@ def get_perspective(orig_frame):
     return {'w': maxWidth, 'h': maxHeight, 'M': M, 'c': screenCnt}
 
 
-def __get_screen_contour(frame):
-    #print("DEBUG - Trying to find screen contour")
-    blue_frame = imgutils.show_primary(frame.copy(), 'blue', True)
-    blue_orig = blue_frame.copy()
-    _, thresh_frame = cv2.threshold(blue_frame, 50, 200, cv2.THRESH_BINARY)
+def calibrate_camera(feed, max_time_sec=120, known_word="Welcome"):
+    start_time = time.time()
+    while(True):
+        success, frame = feed.read()
+        print("Frame Mean: %f" % np.mean(frame))
 
-    blurred = cv2.bilateralFilter(thresh_frame, 11, 17, 17)
+def __get_screen_contour(frame, hex_color, tolerance):
+    #blue_frame = imgutils.show_primary(frame.copy(), 'blue', True)
+    #blue_orig = blue_frame.copy()
+    #_, thresh_frame = cv2.threshold(blue_frame, 50, 200, cv2.THRESH_BINARY)
+    #blurred = cv2.bilateralFilter(thresh_frame, 11, 17, 17)
+
+    mask = imgutils.get_color_mask(frame, hex_color, tolerance)
+    cv2.imshow('Blue Mask', mask)
+
+    blurred = cv2.bilateralFilter(mask, 11, 17, 17)
+    cv2.imshow('Blurred', blurred)
+
     edged = cv2.Canny(blurred, 30, 200)
+    cv2.imshow('Edged', edged)
 
     (cnts, _) = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:10]
@@ -129,16 +141,18 @@ def __get_screen_contour(frame):
         if (len(approx) == 4)                        and \
            (approx.sum() == np.unique(approx).sum()) and \
            (approx.shape[0] == 4)                    and \
-           (cv2.contourArea(approx) > (reduce(lambda x, y: x*y, blue_frame.shape)/4)):
+           (cv2.contourArea(approx) >= (reduce(lambda x, y: x*y, mask.shape)/4)):
             screenCnt = approx
             print("DEBUG - Found screenCnt")
             break
-
-    #return False if screenCnt is None else screenCnt
-    if screenCnt is None:
-        return False
-    else:
-        return screenCnt
+        else:
+            print("Contour area: %f" % cv2.contourArea(approx))
+            cv2.imshow("Perspective Attempt", edged)
+            if cv2.waitKey(1) & 0xFF == ord('1'):
+                break
+    
+    #print("DEBUG: Returning from __get_screen_contour")
+    return screenCnt
 
 
 def __get_channels(matrix, color):

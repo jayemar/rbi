@@ -69,10 +69,6 @@ def remove_primary(matrix, color="blue"):
         return cv2.merge(channels)
 
 
-def get_perspective(frame):
-    frame = show_primary(frame, 'blue')
-
-
 def __get_color_min_max(color_hex, tolerance=0.10):
     if (len(color_hex) != 6):
         raise ValueError("The color must be a 6-digit hex value in RGB form")
