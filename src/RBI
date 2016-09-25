@@ -94,8 +94,8 @@ class RBI:
 
     def prepare_nn_frame(self, frame, height=None, width=None):
         grayed = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        scaled = cv2.resize(grayed, (height, width), interpolation=cv2.INTER_AREA)
         #scaled = imgutils.scale_2d(grayed, height, width)
+        scaled = cv2.resize(grayed, (height, width), interpolation=cv2.INTER_AREA)
         return scaled
 
 
