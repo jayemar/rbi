@@ -1,0 +1,7 @@
+ls -l /dev/uinput
+
+/etc/udev/*
+
+
+
+evtest  - input device event monitor and query tool
