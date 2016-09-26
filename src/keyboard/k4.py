@@ -22,28 +22,36 @@ if __name__ == '__main__':
     time.sleep(8)
     print("sleep 8")
     ui.write(e.EV_KEY, e.KEY_G, 1)  # 1 for key down
+    ui.syn()
     time.sleep(0.250)
     ui.write(e.EV_KEY, e.KEY_G, 0)  # 0 for key up
     ui.syn()
+    time.sleep(0.250)
 
     time.sleep(1)
     print("sleep 1")
     ui.write(e.EV_KEY, e.KEY_G, 1)
+    ui.syn()
     time.sleep(0.250)
     ui.write(e.EV_KEY, e.KEY_G, 0)
     ui.syn()
+    time.sleep(0.250)
 
     time.sleep(1)
     print("sleep 1")
     ui.write(e.EV_KEY, e.KEY_G, 1)
+    ui.syn()
     time.sleep(0.250)
     ui.write(e.EV_KEY, e.KEY_G, 0)
     ui.syn()
+    time.sleep(0.250)
 
     time.sleep(1)
     print("sleep 1")
     ui.write(e.EV_KEY, e.KEY_G, 1)
+    ui.syn()
     time.sleep(0.250)
     ui.write(e.EV_KEY, e.KEY_G, 0)
     ui.syn()
+    time.sleep(0.250)
 
