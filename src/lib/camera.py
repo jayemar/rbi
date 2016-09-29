@@ -1,29 +1,54 @@
 #!/usr/bin/env python
 
-"""
-Uses the 'uvcdynctrl' utility to control an attached USB webcam
-"""
+'''
+Control an attached USB webcam using the 'uvcdynctrl' utility
+'''
 
 import cv2
-import numpy
 import subprocess
-import pdb
 
-class Camera:
-    def __init__(self):
-        pass
+class Camera(object):
+    '''
+    Object representing an attached USB webcam
+    '''
+    def __init__(self, device_num=0):
+        '''
+        Connect to camera at device_num
+
+        Optional Args:
+            device_num: id number of device to use
+        Returns:
+            None
+        Raises:
+            None
+        '''
+        self.feed = cv2.VideoCapture(device_num)
+
 
     def __del__(self):
+        '''
+        Release camera feed and close all OpenCV windows
+        '''
         self.feed.release()
         cv2.destroyAllWindows()
 
     def get_feed(self):
-        self.feed = cv2.VideoCapture(0)
+        '''
+        Get image feed from camera
+
+        Args:
+            None
+        Returns:
+            a cv2.VideoCapture object
+        Raises:
+            None
+        '''
         return self.feed
 
+
     def get_live_stream(self):
-        while(True):
-            ret, frame = self.feed.read()
+        while True:
+            _, frame = self.feed.read()
             return frame
 
 

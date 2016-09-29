@@ -1,6 +1,6 @@
 src/*.swp
 src/*.~
-src/__pycache__
+src/lib/__pycache__/
 src/*.pyc
 src/lib/*.pyc
 roms/fceux

@@ -1,26 +1,29 @@
 #!/usr/bin/env python
 
 import cv2
-import time
 import numpy as np
-import pdb
 
 import imgutils
 
 
-img_map = {'original': False, 'mask': False, 'edges': False, 'neural': False}
+IMG_MAP = {'original': False, 'mask': False, 'edges': False, 'neural': False}
 
 def scale_2d(orig_matrix, height=None, width=None):
+    '''
+    Do some bad ass scaling
+    @height: height of output matrix
+    @width: width of output matrix
+    '''
+
     matrix = orig_matrix.copy()
 
     if len(matrix.shape) != 2:
         raise ValueError("The Matrix must have 2 and only 2 dimensions")
 
     # These dimensions will be required for scaling
-    orig_dim = matrix.shape
     orig_h = matrix.shape[0]
     orig_w = matrix.shape[1]
-    orig_ratio = float(orig_w) / float(orig_h)
+    #orig_ratio = float(orig_w) / float(orig_h)
 
     dim = (0, 0)
 
@@ -42,31 +45,31 @@ def scale_2d(orig_matrix, height=None, width=None):
     else:
         dim = (height, width)
 
-    dim = tuple(map(lambda x: int(x), dim))
+    dim = tuple([int(x) for x in dim])
     return cv2.resize(matrix, dim, interpolation=cv2.INTER_AREA)
 
 
 def get_perspective(feed, hex_color, tolerance=0.10, img_map=False):
-    screenCnt = None
-    while screenCnt is None:
-        success, frame = feed.read()
-        screenCnt = __get_screen_contour(frame, hex_color,
-                tolerance=tolerance, img_map=False)
+    contour = None
+    while contour is None:
+        _, frame = feed.read()
+        contour = __get_screen_contour(frame, hex_color,
+                                       tolerance=tolerance, img_map=False)
 
     # Determine corners of Contour
     try:
-        pts = screenCnt.reshape(4, 2)
+        pts = contour.reshape(4, 2)
     except ValueError:
-        print("ERROR - Countour shape: %s" % str(screenCnt.shape))
-        raise 
+        print "ERROR - Countour shape: %s" % str(contour.shape)
+        raise
 
     rect = np.zeros((4, 2), dtype="float32")
 
     # the top-left point has the smallest sum whereas
     # the bottom-right point has the largest
-    s = pts.sum(axis=1)
-    rect[0] = pts[np.argmin(s)]
-    rect[2] = pts[np.argmax(s)]
+    points_sum = pts.sum(axis=1)
+    rect[0] = pts[np.argmin(points_sum)]
+    rect[2] = pts[np.argmax(points_sum)]
 
     # compute the difference between the points; the top-right
     # point will have the minimum different and the bottom-left
@@ -81,36 +84,39 @@ def get_perspective(feed, hex_color, tolerance=0.10, img_map=False):
     """
 
     # Compute the Width of the new image
-    (tl, tr, br, bl) = rect
-    widthA = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-    widthB = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
+    (top_left, top_right, bottom_right, bottom_left) = rect
+    width1 = np.sqrt(((bottom_right[0] - bottom_left[0]) ** 2) +
+                     ((bottom_right[1] - bottom_left[1]) ** 2))
+    width2 = np.sqrt(((top_right[0] - top_left[0]) ** 2) +
+                     ((top_right[1] - top_left[1]) ** 2))
 
     # Compute the Height of the new image
-    heightA = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
-    heightB = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
+    height1 = np.sqrt(((top_right[0] - bottom_right[0]) ** 2) +
+                      ((top_right[1] - bottom_right[1]) ** 2))
+    height2 = np.sqrt(((top_left[0] - bottom_left[0]) ** 2) +
+                      ((top_left[1] - bottom_left[1]) ** 2))
 
     # Determine final dimensions
-    maxWidth = max(int(widthA), int(widthB))
-    maxHeight = max(int(heightA), int(heightB))
+    max_width = max(int(width1), int(width2))
+    max_height = max(int(height1), int(height2))
 
     # Determine destination points
     dst = np.array([
         [0, 0],
-        [maxWidth - 1, 0],
-        [maxWidth - 1, maxHeight - 1],
-        [0, maxHeight - 1]], dtype="float32")
+        [max_width - 1, 0],
+        [max_width - 1, max_height - 1],
+        [0, max_height - 1]], dtype="float32")
 
     # Calculate the perspective transform matrix
-    M = cv2.getPerspectiveTransform(rect, dst)
+    transform_matrix = cv2.getPerspectiveTransform(rect, dst)
 
-    return {'w': maxWidth, 'h': maxHeight, 'M': M, 'c': screenCnt}
+    return {'w': max_width, 'h': max_height, 'M': transform_matrix, 'c': contour}
 
 
 def calibrate_camera(feed, max_time_sec=120, known_word="Welcome", img_map=False):
-    start_time = time.time()
-    while(True):
-        success, frame = feed.read()
-        print("Frame Mean: %f" % np.mean(frame))
+    while True:
+        _, frame = feed.read()
+        print "Frame Mean: %f" % np.mean(frame)
 
 
 def __get_screen_contour(frame, hex_color, tolerance, img_map=False):
@@ -133,14 +139,14 @@ def __get_screen_contour(frame, hex_color, tolerance, img_map=False):
         cv2.imshow('Edges', edges)
 
     (cnts, _) = cv2.findContours(edges.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:10]
+    cnts = sorted(cnts, key=cv2.contourArea, reverse=True)[:10]
 
     # Assume the largest Contour is the one we want
-    screenCnt = None
-    for c in cnts:
+    contour = None
+    for cnt in cnts:
         # approximate the contour
-        peri = cv2.arcLength(c, True)
-        approx = cv2.approxPolyDP(c, 0.02 * peri, True)
+        peri = cv2.arcLength(cnt, True)
+        approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
 
         # if our approximate contour has 4 points then we can
         # assume that we have the right one
@@ -148,28 +154,14 @@ def __get_screen_contour(frame, hex_color, tolerance, img_map=False):
            (approx.sum() == np.unique(approx).sum()) and \
            (approx.shape[0] == 4)                    and \
            (cv2.contourArea(approx) >= (reduce(lambda x, y: x*y, mask.shape)/4)):
-            screenCnt = approx
-            #print("DEBUG - Found screenCnt")
+            contour = approx
+            #print("DEBUG - Found contour")
             break
         else:
             #print("Contour area: %f" % cv2.contourArea(approx))
             if cv2.waitKey(1) & 0xFF == ord('1'):
                 break
-    
+
     #print("DEBUG: Returning from __get_screen_contour")
-    return screenCnt
-
-
-def __get_channels(matrix, color):
-    if __color_check(color):
-        return cv2.split(matrix)
-
-def __color_check(color):
-    if color not in color_dict.keys():
-        raise ValueError("Color must be one of %s" % color_dict.keys())
-    else:
-        return True
-
-def __get_color_index(color):
-    return list(set([0,1,2]) - set(color_dict[color])).pop()
+    return contour
 
