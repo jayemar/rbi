@@ -1,6 +1,8 @@
 '''
 Class to represent an Arduino microcontroller board
 '''
+import time
+import threading
 import serial
 
 
@@ -12,26 +14,61 @@ class Arduino(object):
         '''
         Configure system to communicate with Arduino
 
-        Optional Args:
-            port: serial port on which to communicate with Arduino
-            baudrate: baud rate at which Arduino is set to communicate
-        Returns:
-            None
-        Raises:
+        Parameters:
+            port        - Optional; serial port on which to communicate with
+                          Arduino
+            baudrate    - Optional; baud rate at which Arduino is set to
+                          communicate
+        Return value:
             None
         '''
         self.tty = serial.Serial(port=port, baudrate=baudrate)
+        self.threads = []
 
-    def write(self, string):
+
+    def write(self, pin_number, string):
         '''
         Convenience method to send characters to Arduino
 
         Args:
             string: character string to send to Arduino
-        Returns:
-            None
-        Raises:
+        Return value:
             None
         '''
-        self.tty.write(string + '\r\n')
+        self.tty.write(pin_number + string + '\r\n')
+
+
+    def blink_led(self, pin_number=11, interval=0.5):
+        '''
+        Blink an LED with a full cycle frequency of 'interval'
+
+        Parameters:
+            pin_number  - pin number mapping to pin on the Arduino Uno
+            interval    - Optional; time in seconds to run through on/off
+            cycle
+        Returns:
+            None
+        '''
+        thread = threading.Thread(target=self.__blink_led,
+                                  args=(pin_number, interval))
+        self.threads.append(thread)
+        thread.start()
+
+
+    def __blink_led(self, pin_number, interval):
+        '''
+        Blink an LED with a full cycle frequency of 'interval'
+
+        Parameters:
+            pin_number  - pin number mapping to pin on the Arduino Uno
+            interval    - Optional; time in seconds to run through on/off
+            cycle
+        Returns:
+            None
+        '''
+        while True:
+            self.write(pin_number, '1')
+            time.sleep(interval/2.0)
+            self.write(pin_number, '0')
+            time.sleep(interval/2.0)
 
