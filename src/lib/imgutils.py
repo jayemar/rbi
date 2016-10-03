@@ -96,15 +96,18 @@ def match_template(img, tmp, show_match=False,
     '''
     match = cv2.matchTemplate(img, tmp, cv2.TM_CCORR)
     resp = cv2.minMaxLoc(match)
+    min_val, max_val, min_loc, max_loc = resp
 
     if show_match:
         match_img = img.copy()
-        p1 = resp[2]
-        p2 = resp[3]
-        p3 = tuple([p1[0], p2[0]])
-        p4 = tuple([p1[1], p2[1]])
 
-        cv2.rectangle(match_img, p2, p1, (0, 0, 255), 3)
+        # NOTE: This depends on what method was used for matchTemplate
+        top_left = max_loc
+        h = tmp.shape[0]
+        w = tmp.shape[1]
+        bottom_right = (top_left[0] + w, top_left[1] + h)
+
+        cv2.rectangle(match_img, top_left, bottom_right, (0, 0, 255), 7)
 
         cv2.namedWindow('Template Match', cv2.WINDOW_NORMAL)
 
