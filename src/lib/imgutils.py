@@ -11,6 +11,7 @@ Library of functions for common image manipulation tasks
 
 import cv2
 import numpy as np
+import pdb
 
 COLOR_DICT = {'red': [0, 1], 'green': [0, 2], 'blue': [1, 2]}
 
@@ -76,24 +77,42 @@ def get_color_mask(matrix, color_hex, tolerance=0.10):
     return mask
 
 
-def match_template(template_path, img_path,
+def match_template(img, tmp, show_match=False,
                    img_xy_start=(0.0, 0.0), img_xy_end=(1.0, 1.0)):
     '''
+    *** NOT IMPLEMENTED ***
+
     Return a location and value for the largest match between an image and a
     template
 
     Parameters:
-        template_path   - file path for the template image
-        img_pag         - file path for the main image
+        img             - main image as obtained from cv2.imread
+        tmp             - template image as obtained from cv2.imread
+        show_match      - display box around matched area
         img_xy_start    - tuple of starting (minX, minY) decimal to begin match
         img_xy_end      - tuple of ending (minX, minY) decimal to end match
     Return value:
         tuple of the form (minVal, maxVal, (minLoc), (maxLoc))
     '''
-    template = cv2.imread(template_path)
-    img = cv2.imread(img_path)
-    match = cv2.matchTemplate(img, template, cv2.TM_CCORR)
-    return cv2.minMaxLoc(match)
+    match = cv2.matchTemplate(img, tmp, cv2.TM_CCORR)
+    resp = cv2.minMaxLoc(match)
+
+    if show_match:
+        match_img = img.copy()
+        p1 = resp[2]
+        p2 = resp[3]
+        p3 = tuple([p1[0], p2[0]])
+        p4 = tuple([p1[1], p2[1]])
+
+        cv2.rectangle(match_img, p2, p1, (0, 0, 255), 3)
+
+        cv2.namedWindow('Template Match', cv2.WINDOW_NORMAL)
+
+        cv2.imshow('Template Match', match_img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+    return resp
 
 
 def show_primary(matrix, color, single_channel=False):
@@ -165,3 +184,4 @@ def __color_check(color=None):
 
 def __get_color_index(color):
     return list(set([0, 1, 2]) - set(COLOR_DICT[color])).pop()
+
