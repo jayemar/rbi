@@ -1,10 +1,22 @@
 #!/usr/bin/env python
 
+'''
+Filename:   camutils.py
+Date:       02 Oct 2016
+Version:    1.0
+Author:     jayemar
+
+Library of common camera functions
+'''
+
 import cv2
 import numpy as np
+import logging
 
-import imgutils
+from lib import imgutils
 
+logging.basicConfig(level=logging.INFO)
+LOGGER = logging.getLogger('camutils')
 
 IMG_MAP = {'original': False, 'mask': False, 'edges': False, 'neural': False}
 
@@ -20,10 +32,8 @@ def scale_2d(orig_matrix, height=None, width=None):
     if len(matrix.shape) != 2:
         raise ValueError("The Matrix must have 2 and only 2 dimensions")
 
-    # These dimensions will be required for scaling
     orig_h = matrix.shape[0]
     orig_w = matrix.shape[1]
-    #orig_ratio = float(orig_w) / float(orig_h)
 
     dim = (0, 0)
 
@@ -50,6 +60,20 @@ def scale_2d(orig_matrix, height=None, width=None):
 
 
 def get_perspective(feed, hex_color, tolerance=0.10, img_map=False):
+    '''
+    Find a rectangular perspective to represent a head-on view of the image
+
+    Parameters:
+        hex_color   - color value of rectangle representing the perspective in
+                      the image
+        tolerance   - optional; amount of tolerance in the hex color value
+        img_map     - optional; map of intermediate images to be shown during
+                      the perspective-finding process
+    Return value:
+        map including height and width of perspective, the transform_matrix to
+        achive the perspective, and the contour of the selected perspective in
+        the original image
+    '''
     contour = None
     while contour is None:
         _, frame = feed.read()
@@ -83,22 +107,7 @@ def get_perspective(feed, hex_color, tolerance=0.10, img_map=False):
     rect *= ratio
     """
 
-    # Compute the Width of the new image
-    (top_left, top_right, bottom_right, bottom_left) = rect
-    width1 = np.sqrt(((bottom_right[0] - bottom_left[0]) ** 2) +
-                     ((bottom_right[1] - bottom_left[1]) ** 2))
-    width2 = np.sqrt(((top_right[0] - top_left[0]) ** 2) +
-                     ((top_right[1] - top_left[1]) ** 2))
-
-    # Compute the Height of the new image
-    height1 = np.sqrt(((top_right[0] - bottom_right[0]) ** 2) +
-                      ((top_right[1] - bottom_right[1]) ** 2))
-    height2 = np.sqrt(((top_left[0] - bottom_left[0]) ** 2) +
-                      ((top_left[1] - bottom_left[1]) ** 2))
-
-    # Determine final dimensions
-    max_width = max(int(width1), int(width2))
-    max_height = max(int(height1), int(height2))
+    max_height, max_width = __get_height_width(rect)
 
     # Determine destination points
     dst = np.array([
@@ -113,10 +122,61 @@ def get_perspective(feed, hex_color, tolerance=0.10, img_map=False):
     return {'w': max_width, 'h': max_height, 'M': transform_matrix, 'c': contour}
 
 
-def calibrate_camera(feed, max_time_sec=120, known_word="Welcome", img_map=False):
-    while True:
-        _, frame = feed.read()
-        print "Frame Mean: %f" % np.mean(frame)
+def __get_height_width(rect):
+    '''
+    Get height and width of a rectangle
+
+    Parameters:
+        rect - (top_left, top_right, bottom_right, bottom_left)
+    Return value:
+        (max_height, max_width)
+    '''
+    (top_left, top_right, bottom_right, bottom_left) = rect
+    # Compute the Width of the new image
+    (top_left, top_right, bottom_right, bottom_left) = rect
+    width1 = np.sqrt(((bottom_right[0] - bottom_left[0]) ** 2) +
+                     ((bottom_right[1] - bottom_left[1]) ** 2))
+    width2 = np.sqrt(((top_right[0] - top_left[0]) ** 2) +
+                     ((top_right[1] - top_left[1]) ** 2))
+
+    # Compute the Height of the new image
+    height1 = np.sqrt(((top_right[0] - bottom_right[0]) ** 2) +
+                      ((top_right[1] - bottom_right[1]) ** 2))
+    height2 = np.sqrt(((top_left[0] - bottom_left[0]) ** 2) +
+                      ((top_left[1] - bottom_left[1]) ** 2))
+
+    # Determine final dimensions
+    max_height = max(int(height1), int(height2))
+    max_width = max(int(width1), int(width2))
+
+    return (max_height, max_width)
+
+
+def calibrate_camera(feed, timeout=120, known_word="Welcome", img_map=False):
+    '''
+    *** NOT YET IMPLEMENTED ***
+
+    Tweak various camera parameters (brightness, focus, contrast, etc) in
+    order to get a good fix on the desired viewing area and to be able to
+    recognize characters for optical character recognition (OCR).
+
+    Parameters:
+        timeout     - optional; the maximum number of seconds to spend on the
+                      calibration process, after which time the camera will be
+                      set to the parameters that seemed to be the best before
+                      the timeout
+        known_word  - optional; a word that will be known to show up that the
+                      camera can look for in order to determine OCR
+                      performance
+        img_map     - optional; map of intermediate frames to be shown during
+                      the calibration process
+    Return value:
+        None
+    '''
+    pass
+    #while True:
+    #    _, frame = feed.read()
+    #    print "Frame Mean: %f" % np.mean(frame)
 
 
 def __get_screen_contour(frame, hex_color, tolerance, img_map=False):
