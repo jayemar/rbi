@@ -74,11 +74,12 @@ def get_perspective(feed, hex_color, tolerance=0.10, img_map=False):
         achive the perspective, and the contour of the selected perspective in
         the original image
     '''
+
     contour = None
     while contour is None:
         _, frame = feed.read()
         contour = __get_screen_contour(frame, hex_color,
-                                       tolerance=tolerance, img_map=False)
+                                       tolerance=tolerance, img_map=img_map)
 
     # Determine corners of Contour
     try:

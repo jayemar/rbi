@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
+import sys
 import subprocess
 import time
 import pdb
 
-from evdev import UInput
+from evdev import UInput, UInputError
 from evdev import ecodes as e
 
 
@@ -15,7 +16,14 @@ class Keyboard:
                  rom='/home/jreinhart/projects/rbi/roms/RBI-Unlicensed.zip'):
         self.emulator = emulator
         self.rom = rom
-        self.ui = UInput()
+        try:
+            self.ui = UInput()
+        except UInputError as uie:
+            print
+            print("ERROR: " + uie.message)
+            print("SOLUTION: Try 'sudo chmod +0666 /dev/uinput'")
+            print
+            sys.exit()
 
 
     def quit(self):

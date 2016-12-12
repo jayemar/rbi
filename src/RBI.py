@@ -19,7 +19,7 @@ import os
 import inspect
 import subprocess
 
-import pdb
+from pprint import pprint as pp
 
 from lib import camera
 from lib import arduino
@@ -27,6 +27,14 @@ from lib import camutils
 
 import NES_keyboard as kbrd
 
+BLUE = 9
+GREEN = 11
+RED = 12
+
+OFF = 0
+ON = 1
+FAST_BLINK = 2
+SLOW_BLINK = 3
 
 
 class RBI(object):
@@ -179,10 +187,12 @@ class RBI(object):
 
     
     def load_game(self,
-                  fceux_path='/usr/bin/fceux',
+                  emulator_path='/usr/bin/fceux',
+                  #emulator_path='/usr/bin/nestopia',
+                  #emulator_path='/usr/bin/fakenes',
                   rom_path='/home/jreinhart/projects/rbi/roms/RBI-Unlicensed.zip',
                   fullscreen=True):
-        subprocess.Popen([fceux_path, rom_path])
+        subprocess.Popen([emulator_path, rom_path])
         if fullscreen:
             time.sleep(0.25)
             self.kbrd.fullscreen()
@@ -194,6 +204,20 @@ class RBI(object):
         self.quit_game()
         time.sleep(2)
         self.load_game()
+
+
+    def random_select_start(self):
+        '''
+        Begin a 1-player game with teams randomly selected
+
+        Parameters:
+            None
+        Return Value:
+            None
+        '''
+        self.kbrd.select()
+        self.kbrd.start()
+
 
     def __configure_logger(self, log_level):
         logging.basicConfig(level=log_level)
@@ -216,7 +240,9 @@ class RBI(object):
     def __configure_arduino(self, port='/dev/ttyACM0', baudrate=57600):
         self.arduino = arduino.Arduino(port=port, baudrate=baudrate)
         self._log.debug("Configured Arduino on port %s, baudrate %d", port, baudrate)
-        self.arduino.write('0')
+        self.arduino.write(BLUE, OFF)
+        self.arduino.write(GREEN, OFF)
+        self.arduino.write(RED, FAST_BLINK)
 
 
     def __del__(self):
@@ -232,8 +258,17 @@ def main():
     Called if __name__ == __main__
     '''
     arg_dict = RBI.parse_args()
+    print("Arg dict:")
+    pp(arg_dict)
 
-    blue_hex = "052C72"
+    blue_hex = "063793"
+    #blue_hex = "052e7a"
+
+    #blue_hex = "052C72"
+
+    #blue_hex = "042562"
+    #blue_hex = "031c49"
+
     matrix_height = 84
     matrix_width = 84
 
@@ -246,17 +281,19 @@ def main():
     rbi = RBI(matrix_height, matrix_width, log_level)
 
     rbi.load_game()
-    time.sleep(5)
-    rbi.restart_game()
 
     #if arg_dict['calibrate']:
     #    camutils.calibrate_camera(rbi.feed, img_map)
 
     #perspective = camutils.get_perspective(rbi.feed, blue_hex, 0.25, img_map)
-    #rbi.arduino.write('1')
+    perspective = camutils.get_perspective(rbi.feed, blue_hex, 0.35, img_map)
+    print("FOUND THE PERSPECTIVE!")
+    rbi.arduino.write(BLUE, OFF)
+    rbi.arduino.write(GREEN, ON)
+    rbi.arduino.write(RED, OFF)
 
-    #cv2.destroyAllWindows()
-    #rbi.loop(perspective, img_map)
+    cv2.destroyAllWindows()
+    rbi.loop(perspective, img_map)
 
 if __name__ == '__main__':
     main()
