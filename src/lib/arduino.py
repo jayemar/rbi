@@ -4,6 +4,7 @@ Class to represent an Arduino microcontroller board
 import time
 import threading
 import serial
+import struct
 
 
 class Arduino(object):
@@ -26,16 +27,19 @@ class Arduino(object):
         self.threads = []
 
 
-    def write(self, pin_number, string):
+    def write(self, pin_number, activation):
         '''
         Convenience method to send characters to Arduino
 
         Args:
-            string: character string to send to Arduino
+            pin_number: pin number of Arduino Uno
+            activation: 0-off, 1-on, 2-fast blink, 3-slow blink
         Return value:
             None
         '''
-        self.tty.write(pin_number + string + '\r\n')
+        self.tty.write(struct.pack('B', pin_number))
+        self.tty.write(struct.pack('B', activation))
+        self.tty.write('\r\n')
 
 
     def blink_led(self, pin_number=11, interval=0.5):
