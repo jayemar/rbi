@@ -94,7 +94,7 @@ def match_template(img, tmp, show_match=False,
     Return value:
         tuple of the form (minVal, maxVal, (minLoc), (maxLoc))
     '''
-    match = cv2.matchTemplate(img, tmp, cv2.TM_CCORR)
+    match = cv2.matchTemplate(img, tmp, cv2.TM_CCOEFF_NORMED)
     resp = cv2.minMaxLoc(match)
     min_val, max_val, min_loc, max_loc = resp
 

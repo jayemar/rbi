@@ -24,6 +24,7 @@ from pprint import pprint as pp
 from lib import camera
 from lib import arduino
 from lib import camutils
+from lib import imgutils
 
 import NES_keyboard as kbrd
 
@@ -70,6 +71,12 @@ class RBI(object):
         self.__configure_camera()
         self.__configure_arduino()
         self.kbrd = kbrd.Keyboard()
+
+        self.templates = {}
+        self.templates['BALL']   = cv2.imread('../images/templates/warped/ball_small_warped.png')
+        self.templates['FOUL']   = cv2.imread('../images/templates/warped/foul_small_warped.png')
+        self.templates['OUT']    = cv2.imread('../images/templates/warped/out_small_warped.png')
+        self.templates['STRIKE'] = cv2.imread('../images/templates/warped/strike_small_warped.png')
 
 
     @staticmethod
@@ -121,13 +128,19 @@ class RBI(object):
                 cv2.imshow("My Frame", frame)
 
             warped = self.warp_frame(frame, perspective)
+
+            for key, val in self.templates.items():
+                resp = imgutils.match_template(warped, val)
+                if resp[1] > 0.6:
+                    print key
+
             if img_map and img_map['warped']:
                 cv2.imshow('Warped', warped)
 
             nn_frame = self.prepare_nn_frame(warped,
                                              self.nn_matrix_info['height'],
                                              self.nn_matrix_info['width'])
-            print "DEBUG - nn_frame.shape = %s" % str(nn_frame.shape)
+            #print "DEBUG - nn_frame.shape = %s" % str(nn_frame.shape)
             if img_map and img_map['neural']:
                 cv2.imshow('NN', nn_frame)
 
