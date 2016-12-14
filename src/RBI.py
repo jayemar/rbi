@@ -39,8 +39,6 @@ ON = 1
 FAST_BLINK = 2
 SLOW_BLINK = 3
 
-IS_MSG = False
-
 class RBI(object):
     '''
     Computer AI plays RBI Baseball on FCEUX Emulator
@@ -124,6 +122,9 @@ class RBI(object):
         Raises:
             None
         '''
+        new_msg = False
+        active_msg = False
+
         while True:
             _, frame = self.feed.read()
 
@@ -132,10 +133,18 @@ class RBI(object):
 
             warped = self.warp_frame(frame, perspective)
 
+            # Pattern matching for BALL/STRIKE/OUT/FOUL
+            new_msg = False
             for key, val in self.templates.items():
                 resp = imgutils.match_template(warped, val)
                 if resp[1] > 0.6:
-                    print key
+                    new_msg = True
+                    if not active_msg:
+                        print key
+            if new_msg:
+                active_msg = True
+            else:
+                active_msg = False
 
             if img_map and img_map['warped']:
                 cv2.imshow('Warped', warped)
@@ -260,7 +269,7 @@ class RBI(object):
         time.sleep(0.25)
         self.arduino.write(GREEN, OFF)
         time.sleep(0.25)
-        self.arduino.write(RED, FAST_BLINK)
+        self.arduino.write(RED, SLOW_BLINK)
 
 
     def __del__(self):
@@ -306,7 +315,7 @@ def main():
     #perspective = camutils.get_perspective(rbi.feed, blue_hex, 0.25, img_map)
     perspective = camutils.get_perspective(rbi.feed, blue_hex, 0.35, img_map)
     print("FOUND THE PERSPECTIVE!")
-    rbi.arduino.write(GREEN, ON)
+    rbi.arduino.write(BLUE, ON)
     time.sleep(0.25)
     rbi.arduino.write(RED, OFF)
 
