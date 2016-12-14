@@ -19,6 +19,8 @@ import os
 import inspect
 import subprocess
 
+import pdb
+
 from pprint import pprint as pp
 
 from lib import camera
@@ -37,6 +39,7 @@ ON = 1
 FAST_BLINK = 2
 SLOW_BLINK = 3
 
+IS_MSG = False
 
 class RBI(object):
     '''
@@ -254,7 +257,9 @@ class RBI(object):
         self.arduino = arduino.Arduino(port=port, baudrate=baudrate)
         self._log.debug("Configured Arduino on port %s, baudrate %d", port, baudrate)
         self.arduino.write(BLUE, OFF)
+        time.sleep(0.25)
         self.arduino.write(GREEN, OFF)
+        time.sleep(0.25)
         self.arduino.write(RED, FAST_BLINK)
 
 
@@ -301,8 +306,8 @@ def main():
     #perspective = camutils.get_perspective(rbi.feed, blue_hex, 0.25, img_map)
     perspective = camutils.get_perspective(rbi.feed, blue_hex, 0.35, img_map)
     print("FOUND THE PERSPECTIVE!")
-    rbi.arduino.write(BLUE, OFF)
     rbi.arduino.write(GREEN, ON)
+    time.sleep(0.25)
     rbi.arduino.write(RED, OFF)
 
     cv2.destroyAllWindows()
