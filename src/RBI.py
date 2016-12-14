@@ -124,6 +124,8 @@ class RBI(object):
         '''
         new_msg = False
         active_msg = False
+        active_led = 0
+        led_map = {'OUT': 4, 'STRIKE': 4, 'FOUL': 3, 'BALL': 2}
 
         while True:
             _, frame = self.feed.read()
@@ -141,9 +143,15 @@ class RBI(object):
                     new_msg = True
                     if not active_msg:
                         print key
+                        active_msg = True
+                        active_led = led_map[key]
+                        self.arduino.write(active_led, 1)
+                        print("Turning LED %d ON" % active_led)
             if new_msg:
                 active_msg = True
-            else:
+            elif active_msg:
+                self.arduino.write(active_led, 0)
+                print("Turning LED %d OFF" % active_led)
                 active_msg = False
 
             if img_map and img_map['warped']:
