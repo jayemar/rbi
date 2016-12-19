@@ -3,6 +3,7 @@
 import sys
 import subprocess
 import time
+import logging
 import pdb
 
 from evdev import UInput, UInputError
@@ -13,9 +14,12 @@ DOWN_TIME=0.350
 
 class Keyboard:
     def __init__(self, emulator='/usr/bin/fceux',
-                 rom='/home/jreinhart/projects/rbi/roms/RBI-Unlicensed.zip'):
+                 rom='/home/jreinhart/projects/rbi/roms/RBI-Unlicensed.zip',
+                 log_level=logging.INFO):
         self.emulator = emulator
         self.rom = rom
+        logging.basicConfig(level=log_level)
+        self._log = logging.getLogger('NES_Keyboard')
         try:
             self.ui = UInput()
         except UInputError as uie:
@@ -27,8 +31,18 @@ class Keyboard:
 
 
     def quit(self):
-        self.__keys_down([e.KEY_LEFTCTRL, e.KEY_Q])
-        self.__keys_up([e.KEY_LEFTCTRL, e.KEY_Q])
+        self._log.info("Attempting to quit the game")
+        #self.__keys_down([e.KEY_LEFTCTRL, e.KEY_Q])
+        #self.__keys_up([e.KEY_LEFTCTRL, e.KEY_Q])
+        self.__keys_down([e.KEY_RIGHTCTRL, e.KEY_Q])
+        self.__keys_up([e.KEY_RIGHTCTRL, e.KEY_Q])
+
+    def restart(self):
+        self._log.info("Attempting to restart the game")
+        self.__keys_down([e.KEY_LEFTALT, e.KEY_E])
+        self.__keys_up([e.KEY_LEFTALT, e.KEY_E])
+        self.__keys_down([e.KEY_O])
+        self.__keys_up([e.KEY_O])
 
     def fullscreen(self):
         self.__keys_down([e.KEY_LEFTALT, e.KEY_ENTER])

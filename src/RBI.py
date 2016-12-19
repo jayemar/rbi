@@ -71,12 +71,14 @@ class RBI(object):
         self.nn_matrix_info = {'height': height, 'width': width}
         self.__configure_camera()
         self.__configure_arduino()
-        self.kbrd = kbrd.Keyboard()
+        self.kbrd = kbrd.Keyboard(log_level=logging.DEBUG)
 
         self.templates = {}
         self.templates['BALL']   = cv2.imread('../images/templates/warped/ball_small_warped.png')
         self.templates['FOUL']   = cv2.imread('../images/templates/warped/foul_small_warped.png')
+        self.templates['HOMERUN']= cv2.imread('../images/templates/warped/homerun_small_warped.png')
         self.templates['OUT']    = cv2.imread('../images/templates/warped/out_small_warped.png')
+        #self.templates['SCORE']  = cv2.imread('../images/templates/warped/score_small_warped.png')
         self.templates['STRIKE'] = cv2.imread('../images/templates/warped/strike_small_warped.png')
 
 
@@ -125,7 +127,15 @@ class RBI(object):
         new_msg = False
         active_msg = False
         active_led = 0
-        led_map = {'OUT': 4, 'STRIKE': 4, 'FOUL': 3, 'BALL': 2}
+        out_count = 0
+        led_map = {
+            'OUT': 4,
+            'STRIKE': 4,
+            'FOUL': 3,
+            'BALL': 2,
+            'SCORE': 0,
+            'HOMERUN': 0
+            }
 
         while True:
             _, frame = self.feed.read()
@@ -142,16 +152,21 @@ class RBI(object):
                 if resp[1] > 0.6:
                     new_msg = True
                     if not active_msg:
-                        print key
+                        self._log.info("Event: " + key)
                         active_msg = True
                         active_led = led_map[key]
                         self.arduino.write(active_led, 1)
-                        print("Turning LED %d ON" % active_led)
+                        self._log.debug("Turning LED " + str(active_led) + " ON")
+                        if key is 'OUT':
+                            out_count += 1
+                        if out_count % 3 == 0:
+                            self.restart_game()
+
             if new_msg:
                 active_msg = True
             elif active_msg:
                 self.arduino.write(active_led, 0)
-                print("Turning LED %d OFF" % active_led)
+                self._log.debug("Turning LED " + str(active_led) + " OFF")
                 active_msg = False
 
             if img_map and img_map['warped']:
@@ -224,7 +239,7 @@ class RBI(object):
                   #emulator_path='/usr/bin/nestopia',
                   #emulator_path='/usr/bin/fakenes',
                   rom_path='/home/jreinhart/projects/rbi/roms/RBI-Unlicensed.zip',
-                  fullscreen=True):
+                  fullscreen=False):
         subprocess.Popen([emulator_path, rom_path])
         if fullscreen:
             time.sleep(0.25)
@@ -234,9 +249,8 @@ class RBI(object):
         self.kbrd.quit()
 
     def restart_game(self):
-        self.quit_game()
-        time.sleep(2)
-        self.load_game()
+        self._log.info("Calling the restart commond on Keyboard")
+        self.kbrd.restart()
 
 
     def random_select_start(self):
@@ -263,7 +277,7 @@ class RBI(object):
 
         directory = os.path.dirname(os.path.abspath(
             inspect.getfile(inspect.currentframe())))
-        cam_cfg = json.load(open(directory + '/../camera.cfg'))
+        cam_cfg = json.load(open(directory + '/../config/camera.cfg'))
         self.camera.set_brightness(int(cam_cfg['Brightness']))
         self.camera.set_focus(int(cam_cfg['Focus']))
         self._log.debug("Brightness set to %s", str(self.camera.get_brightness()))
@@ -322,7 +336,7 @@ def main():
 
     #perspective = camutils.get_perspective(rbi.feed, blue_hex, 0.25, img_map)
     perspective = camutils.get_perspective(rbi.feed, blue_hex, 0.35, img_map)
-    print("FOUND THE PERSPECTIVE!")
+    rbi._log.info("Found the Perspective")
     rbi.arduino.write(BLUE, ON)
     time.sleep(0.25)
     rbi.arduino.write(RED, OFF)
