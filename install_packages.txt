@@ -1,3 +1,11 @@
+numpy
+opencv*
 uvcdynctrl
 fceux
 zbar
+
+
+Building OpenCV from source:
+https://docs.opencv.org/master/dd/dd5/tutorial_py_setup_in_fedora.html
+
+May need to add install path to PYTHONPATH

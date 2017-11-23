@@ -3,7 +3,15 @@ Run show_cam.py file.  Or from Python environment:
 
 >> import cv2
 >> feed = cv2.VideoCapture(0)
+>> feed.isOpened()
 >> _, frame = feed.read()
 
+Is feed opened?
 Is frame None?	This is bad.
 Is _ False?	This is bad.
+
+
+Using opencv packages with pip (eg opencv-python) didn't work.
+I ended up building OpenCV from source, installing into /usr/local/lib,
+and then adding that path to my PYTHONPATH.  The built cv2 package then
+allowed me to open my webcam.

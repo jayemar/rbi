@@ -79,10 +79,10 @@ def get_perspective(feed, hex_color, tolerance=0.10, img_map=False):
 
     contour = None
     while contour is None:
-        _, frame = feed.read()
+        read_success, frame = feed.read()
         logger.info("Frame: %s" % str(frame))
-        if not frame:
-            logger.info("No frame; continuing...")
+        if not read_success:
+            logger.info("No frame read; continuing loop...")
             continue
         contour = _get_screen_contour(
             frame, hex_color, tolerance=tolerance, img_map=img_map)
@@ -198,8 +198,6 @@ def _get_screen_contour(frame, hex_color, tolerance, img_map=False):
     if img_map and img_map['original']:
         cv2.imshow('Original', frame)
 
-    print("Calling get_color_mask with: frame=%s, hex_color=%s, tolerance=%s"
-          % (str(frame), str(hex_color), str(tolerance)))
     mask = imgutils.get_color_mask(frame, hex_color, tolerance)
     if img_map and img_map['mask']:
         cv2.imshow('Mask', mask)
@@ -210,14 +208,16 @@ def _get_screen_contour(frame, hex_color, tolerance, img_map=False):
     if img_map and img_map['edges']:
         cv2.imshow('Edges', edges)
 
-    (cnts, _) = cv2.findContours(edges.copy(),
-                                 cv2.RETR_TREE,
-                                 cv2.CHAIN_APPROX_SIMPLE)
-    cnts = sorted(cnts, key=cv2.contourArea, reverse=True)[:10]
+    _image, contours, _hierarchy = cv2.findContours(
+        edges.copy(),
+        cv2.RETR_TREE,
+        cv2.CHAIN_APPROX_SIMPLE
+    )
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)[:10]
 
     # Assume the largest Contour is the one we want
     contour = None
-    for cnt in cnts:
+    for cnt in contours:
         # approximate the contour
         peri = cv2.arcLength(cnt, True)
         approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)

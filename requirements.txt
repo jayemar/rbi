@@ -1,7 +1,5 @@
-opencv-python
 pyserial
 evdev
-
 tensorflow
 keras
 sklearn

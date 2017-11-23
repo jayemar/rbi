@@ -1,3 +1,5 @@
+notebooks/lib/*.pyc
+notebooks/lib/__pycache__/
 src/*.swp
 src/*.~
 src/lib/__pycache__/
