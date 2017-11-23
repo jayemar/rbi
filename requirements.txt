@@ -1,0 +1,13 @@
+opencv-python
+pyserial
+evdev
+
+tensorflow
+keras
+sklearn
+jupyter
+jupyter_nbextensions_configurator
+pandas
+matplotlib
+h5py
+arrow

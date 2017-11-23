@@ -1,15 +1,9 @@
 #!/usr/bin/env python
 
 import camutils
-import imgutils
 import Perspective
 
 import cv2
-import numpy as np
-import pdb
-import time
-
-from pprint import pprint as pp
 
 camera = camutils.Camera()
 feed = camera.get_feed()
@@ -25,9 +19,10 @@ MATRIX_WIDTH = 84
 ratio = 1.0
 screenCnt = None
 
+
 def prepare_nn_matrix(frame):
     scaled = cv2.resize(frame, (MATRIX_HEIGHT, MATRIX_WIDTH))
-    #grayed = cv2.cvtColor(scaled, cv2.COLOR_BGR2GRAY)
+    # grayed = cv2.cvtColor(scaled, cv2.COLOR_BGR2GRAY)
     grayed = cv2.cvtColor(scaled, cv2.CV_8U, dstCn=1)
     return grayed.ravel()
 
@@ -37,10 +32,11 @@ while(True):
 
     # Capture frame-by-frame
     ret, frame = feed.read()
-    if not ret: continue
+    if not ret:
+        continue
     orig = frame.copy()
 
-    if (good_M, max_height, max_width) == (None,None,None):
+    if (good_M, max_height, max_width) == (None, None, None):
         p = P.get_perspective(frame)
         if not p:
             continue

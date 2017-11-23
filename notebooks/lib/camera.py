@@ -7,6 +7,7 @@ Control an attached USB webcam using the 'uvcdynctrl' utility
 import cv2
 import subprocess
 
+
 class Camera(object):
     '''
     Object representing an attached USB webcam
@@ -23,7 +24,6 @@ class Camera(object):
             None
         '''
         self.feed = cv2.VideoCapture(device_num)
-
 
     def __del__(self):
         '''
@@ -45,12 +45,10 @@ class Camera(object):
         '''
         return self.feed
 
-
     def get_live_stream(self):
         while True:
             _, frame = self.feed.read()
             return frame
-
 
     def get_brightness(self):
         return self.__uvc("Brightness").strip()
@@ -80,13 +78,11 @@ class Camera(object):
     def auto_focus(self):
         self.__uvc("Focus, Auto", 1)
 
-
     def get_sharpness(self):
         return self.__uvc("Sharpness").strip()
 
     def set_sharpness(self, b):
         self.__uvc("Sharpness", b)
-
 
     def __uvc(self, cmd, val=None):
         if val:
@@ -94,4 +90,3 @@ class Camera(object):
         else:
             resp = subprocess.check_output(["uvcdynctrl", "-g", cmd])
         return resp
-

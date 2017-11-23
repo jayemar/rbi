@@ -26,7 +26,6 @@ class Arduino(object):
         self.tty = serial.Serial(port=port, baudrate=baudrate)
         self.threads = []
 
-
     def write(self, pin_number, activation):
         '''
         Convenience method to send characters to Arduino
@@ -39,8 +38,7 @@ class Arduino(object):
         '''
         self.tty.write(struct.pack('B', pin_number))
         self.tty.write(struct.pack('B', activation))
-        self.tty.write('\r\n')
-
+        self.tty.write(b'\r\n')
 
     def blink_led(self, pin_number=11, interval=0.5):
         '''
@@ -58,7 +56,6 @@ class Arduino(object):
         self.threads.append(thread)
         thread.start()
 
-
     def __blink_led(self, pin_number, interval):
         '''
         Blink an LED with a full cycle frequency of 'interval'
@@ -72,7 +69,6 @@ class Arduino(object):
         '''
         while True:
             self.write(pin_number, '1')
-            time.sleep(interval/2.0)
+            time.sleep(interval / 2.0)
             self.write(pin_number, '0')
-            time.sleep(interval/2.0)
-
+            time.sleep(interval / 2.0)

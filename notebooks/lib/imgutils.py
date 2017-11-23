@@ -11,9 +11,9 @@ Library of functions for common image manipulation tasks
 
 import cv2
 import numpy as np
-import pdb
 
 COLOR_DICT = {'red': [0, 1], 'green': [0, 2], 'blue': [1, 2]}
+
 
 def scale_2d(matrix, height=None, width=None):
     '''
@@ -62,6 +62,7 @@ def scale_2d(matrix, height=None, width=None):
     dim = tuple([int(x) for x in dim])
     return cv2.resize(matrix, dim, interpolation=cv2.INTER_AREA)
 
+
 def get_color_mask(matrix, color_hex, tolerance=0.10):
     '''
     Get color mask for a specified RGB hex color value
@@ -73,6 +74,8 @@ def get_color_mask(matrix, color_hex, tolerance=0.10):
         grayscale mask matrix
     '''
     (min_val, max_val) = __get_color_min_max(color_hex, tolerance)
+    print("Calling cv2.inRange with values: matrix=%s, min_val=%s, max_val=%s"
+          % (str(matrix), str(min_val), str(max_val)))
     mask = cv2.inRange(matrix, min_val, max_val)
     return mask
 
@@ -179,12 +182,13 @@ def __get_channels(matrix, color=None):
         raise ValueError("Color must be one of %s" % COLOR_DICT.keys())
     return cv2.split(matrix)
 
+
 def __color_check(color=None):
     if color is not None and color not in COLOR_DICT.keys():
         raise ValueError("Color must be one of %s" % COLOR_DICT.keys())
     else:
         return True
 
+
 def __get_color_index(color):
     return list(set([0, 1, 2]) - set(COLOR_DICT[color])).pop()
-

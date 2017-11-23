@@ -1,0 +1,9 @@
+Run show_cam.py file.  Or from Python environment:
+
+
+>> import cv2
+>> feed = cv2.VideoCapture(0)
+>> _, frame = feed.read()
+
+Is frame None?	This is bad.
+Is _ False?	This is bad.

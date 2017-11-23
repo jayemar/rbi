@@ -13,12 +13,14 @@ import cv2
 import numpy as np
 import logging
 
+from functools import reduce
 from lib import imgutils
 
 logging.basicConfig(level=logging.INFO)
-LOGGER = logging.getLogger('camutils')
+logger = logging.getLogger('camutils')
 
 IMG_MAP = {'original': False, 'mask': False, 'edges': False, 'neural': False}
+
 
 def scale_2d(orig_matrix, height=None, width=None):
     '''
@@ -78,14 +80,18 @@ def get_perspective(feed, hex_color, tolerance=0.10, img_map=False):
     contour = None
     while contour is None:
         _, frame = feed.read()
-        contour = __get_screen_contour(frame, hex_color,
-                                       tolerance=tolerance, img_map=img_map)
+        logger.info("Frame: %s" % str(frame))
+        if not frame:
+            logger.info("No frame; continuing...")
+            continue
+        contour = _get_screen_contour(
+            frame, hex_color, tolerance=tolerance, img_map=img_map)
 
     # Determine corners of Contour
     try:
         pts = contour.reshape(4, 2)
     except ValueError:
-        print "ERROR - Countour shape: %s" % str(contour.shape)
+        print("ERROR - Countour shape: %s" % str(contour.shape))
         raise
 
     rect = np.zeros((4, 2), dtype="float32")
@@ -108,7 +114,7 @@ def get_perspective(feed, hex_color, tolerance=0.10, img_map=False):
     rect *= ratio
     """
 
-    max_height, max_width = __get_height_width(rect)
+    max_height, max_width = _get_height_width(rect)
 
     # Determine destination points
     dst = np.array([
@@ -120,10 +126,13 @@ def get_perspective(feed, hex_color, tolerance=0.10, img_map=False):
     # Calculate the perspective transform matrix
     transform_matrix = cv2.getPerspectiveTransform(rect, dst)
 
-    return {'w': max_width, 'h': max_height, 'M': transform_matrix, 'c': contour}
+    return {'w': max_width,
+            'h': max_height,
+            'M': transform_matrix,
+            'c': contour}
 
 
-def __get_height_width(rect):
+def _get_height_width(rect):
     '''
     Get height and width of a rectangle
 
@@ -175,20 +184,22 @@ def calibrate_camera(feed, timeout=120, known_word="Welcome", img_map=False):
         None
     '''
     pass
-    #while True:
-    #    _, frame = feed.read()
-    #    print "Frame Mean: %f" % np.mean(frame)
+    # while True:
+    #     _, frame = feed.read()
+    #     print "Frame Mean: %f" % np.mean(frame)
 
 
-def __get_screen_contour(frame, hex_color, tolerance, img_map=False):
-    #blue_frame = imgutils.show_primary(frame.copy(), 'blue', True)
-    #blue_orig = blue_frame.copy()
-    #_, thresh_frame = cv2.threshold(blue_frame, 50, 200, cv2.THRESH_BINARY)
-    #blurred = cv2.bilateralFilter(thresh_frame, 11, 17, 17)
+def _get_screen_contour(frame, hex_color, tolerance, img_map=False):
+    # blue_frame = imgutils.show_primary(frame.copy(), 'blue', True)
+    # blue_orig = blue_frame.copy()
+    # _, thresh_frame = cv2.threshold(blue_frame, 50, 200, cv2.THRESH_BINARY)
+    # blurred = cv2.bilateralFilter(thresh_frame, 11, 17, 17)
 
     if img_map and img_map['original']:
         cv2.imshow('Original', frame)
 
+    print("Calling get_color_mask with: frame=%s, hex_color=%s, tolerance=%s"
+          % (str(frame), str(hex_color), str(tolerance)))
     mask = imgutils.get_color_mask(frame, hex_color, tolerance)
     if img_map and img_map['mask']:
         cv2.imshow('Mask', mask)
@@ -199,7 +210,9 @@ def __get_screen_contour(frame, hex_color, tolerance, img_map=False):
     if img_map and img_map['edges']:
         cv2.imshow('Edges', edges)
 
-    (cnts, _) = cv2.findContours(edges.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    (cnts, _) = cv2.findContours(edges.copy(),
+                                 cv2.RETR_TREE,
+                                 cv2.CHAIN_APPROX_SIMPLE)
     cnts = sorted(cnts, key=cv2.contourArea, reverse=True)[:10]
 
     # Assume the largest Contour is the one we want
@@ -211,18 +224,17 @@ def __get_screen_contour(frame, hex_color, tolerance, img_map=False):
 
         # if our approximate contour has 4 points then we can
         # assume that we have the right one
-        if (len(approx) == 4)                        and \
-           (approx.sum() == np.unique(approx).sum()) and \
-           (approx.shape[0] == 4)                    and \
-           (cv2.contourArea(approx) >= (reduce(lambda x, y: x*y, mask.shape)/4)):
+        if (len(approx) == 4 and
+            approx.sum() == np.unique(approx).sum() and
+            approx.shape[0] == 4 and
+            cv2.contourArea(approx) >=
+                (reduce(lambda x, y: x * y, mask.shape) / 4)):
             contour = approx
-            #print("DEBUG - Found contour")
             break
         else:
-            #print("Contour area: %f" % cv2.contourArea(approx))
+            # print("Contour area: %f" % cv2.contourArea(approx))
             if cv2.waitKey(1) & 0xFF == ord('1'):
                 break
 
-    #print("DEBUG: Returning from __get_screen_contour")
+    # print("DEBUG: Returning from _get_screen_contour")
     return contour
-

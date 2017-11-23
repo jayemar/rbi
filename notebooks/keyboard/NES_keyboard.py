@@ -4,13 +4,12 @@ import sys
 import subprocess
 import time
 import logging
-import pdb
 
 from evdev import UInput, UInputError
 from evdev import ecodes as e
 
+DOWN_TIME = 0.350
 
-DOWN_TIME=0.350
 
 class Keyboard:
     def __init__(self, emulator='/usr/bin/fceux',
@@ -24,16 +23,15 @@ class Keyboard:
             self.ui = UInput()
         except UInputError as uie:
             print
-            print("ERROR: " + uie.message)
+            print("ERROR: %s" % uie)
             print("SOLUTION: Try 'sudo chmod +0666 /dev/uinput'")
             print
             sys.exit()
 
-
     def quit(self):
         self._log.info("Attempting to quit the game")
-        #self.__keys_down([e.KEY_LEFTCTRL, e.KEY_Q])
-        #self.__keys_up([e.KEY_LEFTCTRL, e.KEY_Q])
+        # self.__keys_down([e.KEY_LEFTCTRL, e.KEY_Q])
+        # self.__keys_up([e.KEY_LEFTCTRL, e.KEY_Q])
         self.__keys_down([e.KEY_RIGHTCTRL, e.KEY_Q])
         self.__keys_up([e.KEY_RIGHTCTRL, e.KEY_Q])
 
@@ -48,7 +46,6 @@ class Keyboard:
         self.__keys_down([e.KEY_LEFTALT, e.KEY_ENTER])
         self.__keys_up([e.KEY_LEFTALT, e.KEY_ENTER])
 
-
     def buttonA(self):
         self.__keys_down([e.KEY_K])
         self.__keys_up([e.KEY_K])
@@ -56,7 +53,6 @@ class Keyboard:
     def buttonB(self):
         self.__keys_down([e.KEY_J])
         self.__keys_up([e.KEY_J])
-
 
     def up(self):
         self.__keys_down([e.KEY_W])
@@ -74,7 +70,6 @@ class Keyboard:
         self.__keys_down([e.KEY_D])
         self.__keys_up([e.KEY_D])
 
-
     def upA(self):
         self.__keys_down([e.KEY_W, e.KEY_K])
         self.__keys_up([e.KEY_W, e.KEY_K])
@@ -90,7 +85,6 @@ class Keyboard:
     def rightA(self):
         self.__keys_down([e.KEY_D, e.KEY_K])
         self.__keys_up([e.KEY_D, e.KEY_K])
-
 
     def upB(self):
         self.__keys_down([e.KEY_W, e.KEY_J])
@@ -108,7 +102,6 @@ class Keyboard:
         self.__keys_down([e.KEY_D, e.KEY_J])
         self.__keys_up([e.KEY_D, e.KEY_J])
 
-
     def upAB(self):
         self.__keys_down([e.KEY_W, e.KEY_K, e.KEY_J])
         self.__keys_up([e.KEY_W, e.KEY_K, e.KEY_J])
@@ -124,7 +117,6 @@ class Keyboard:
     def rightAB(self):
         self.__keys_down([e.KEY_D, e.KEY_K, e.KEY_J])
         self.__keys_up([e.KEY_D, e.KEY_K, e.KEY_J])
-
 
     def ne(self):
         self.__keys_down([e.KEY_W, e.KEY_D])
@@ -142,7 +134,6 @@ class Keyboard:
         self.__keys_down([e.KEY_W, e.KEY_A])
         self.__keys_up([e.KEY_W, e.KEY_A])
 
-
     def neA(self):
         self.__keys_down([e.KEY_W, e.KEY_D, e.KEY_K])
         self.__keys_up([e.KEY_W, e.KEY_D, e.KEY_K])
@@ -158,7 +149,6 @@ class Keyboard:
     def nwA(self):
         self.__keys_down([e.KEY_W, e.KEY_A, e.KEY_K])
         self.__keys_up([e.KEY_W, e.KEY_A, e.KEY_K])
-
 
     def neB(self):
         self.__keys_down([e.KEY_W, e.KEY_D, e.KEY_J])
@@ -176,7 +166,6 @@ class Keyboard:
         self.__keys_down([e.KEY_W, e.KEY_A, e.KEY_J])
         self.__keys_up([e.KEY_W, e.KEY_A, e.KEY_J])
 
-
     def neAB(self):
         self.__keys_down([e.KEY_W, e.KEY_D, e.KEY_K, e.KEY_J])
         self.__keys_up([e.KEY_W, e.KEY_D, e.KEY_K, e.KEY_J])
@@ -193,7 +182,6 @@ class Keyboard:
         self.__keys_down([e.KEY_W, e.KEY_A, e.KEY_K, e.KEY_J])
         self.__keys_up([e.KEY_W, e.KEY_A, e.KEY_K, e.KEY_J])
 
-
     def select(self):
         self.__keys_down([e.KEY_G], True)
         self.__keys_up([e.KEY_G], False)
@@ -201,7 +189,6 @@ class Keyboard:
     def start(self):
         self.__keys_down([e.KEY_H], True)
         self.__keys_up([e.KEY_H], False)
-    
 
     def __keys_down(self, keys, wait=True):
         for key in keys:
@@ -227,12 +214,11 @@ if __name__ == '__main__':
     print("Pressed Select")
     kbrd.select()
 
-
     time.sleep(1)
     print("Start game")
     kbrd.start()
 
-    time.sleep(1)
+    time.eep(1)
     print("Select Team #1")
     kbrd.buttonA()
 
@@ -247,4 +233,3 @@ if __name__ == '__main__':
     time.sleep(12.95)
     print("Swing bat")
     kbrd.buttonA()
-

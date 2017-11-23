@@ -19,8 +19,6 @@ import os
 import inspect
 import subprocess
 
-import pdb
-
 from pprint import pprint as pp
 
 from lib import camera
@@ -28,7 +26,7 @@ from lib import arduino
 from lib import camutils
 from lib import imgutils
 
-import NES_keyboard as kbrd
+from keyboard import NES_keyboard as kbrd
 
 BLUE = 9
 GREEN = 11
@@ -38,6 +36,7 @@ OFF = 0
 ON = 1
 FAST_BLINK = 2
 SLOW_BLINK = 3
+
 
 class RBI(object):
     '''
@@ -59,28 +58,33 @@ class RBI(object):
                    'warn': logging.WARN}
 
         try:
-            self.__configure_logger(log_map[log_level])
+            self._configure_logger(log_map[log_level])
         except AttributeError:
             if log_level is None:
-                self.__configure_logger(logging.INFO)
+                self._configure_logger(logging.INFO)
             else:
-                self.__configure_logger(logging.DEBUG)
+                self._configure_logger(logging.DEBUG)
                 self._log.warn("Unable to configure logger with value '" +
                                str(log_level) + "'\n")
 
         self.nn_matrix_info = {'height': height, 'width': width}
-        self.__configure_camera()
-        self.__configure_arduino()
+        self._configure_camera()
+        self._configure_arduino()
         self.kbrd = kbrd.Keyboard(log_level=logging.DEBUG)
 
         self.templates = {}
-        self.templates['BALL']   = cv2.imread('../images/templates/warped/ball_small_warped.png')
-        self.templates['FOUL']   = cv2.imread('../images/templates/warped/foul_small_warped.png')
-        self.templates['HOMERUN']= cv2.imread('../images/templates/warped/homerun_small_warped.png')
-        self.templates['OUT']    = cv2.imread('../images/templates/warped/out_small_warped.png')
-        #self.templates['SCORE']  = cv2.imread('../images/templates/warped/score_small_warped.png')
-        self.templates['STRIKE'] = cv2.imread('../images/templates/warped/strike_small_warped.png')
-
+        self.templates['BALL'] = cv2.imread(
+            '../images/templates/warped/ball_small_warped.png')
+        self.templates['FOUL'] = cv2.imread(
+            '../images/templates/warped/foul_small_warped.png')
+        self.templates['HOMERUN'] = cv2.imread(
+            '../images/templates/warped/homerun_small_warped.png')
+        self.templates['OUT'] = cv2.imread(
+            '../images/templates/warped/out_small_warped.png')
+        # self.templates['SCORE'] = cv2.imread(
+        #     '../images/templates/warped/score_small_warped.png')
+        self.templates['STRIKE'] = cv2.imread(
+            '../images/templates/warped/strike_small_warped.png')
 
     @staticmethod
     def parse_args():
@@ -90,24 +94,30 @@ class RBI(object):
         Called when this file is run from the command line.
         '''
         arg_map = argparse.ArgumentParser()
-        arg_map.add_argument("-t", "--train", required=False, action="store_true",
+        arg_map.add_argument("-t", "--train", required=False,
+                             action="store_true",
                              help="Operate in training mode")
-        arg_map.add_argument("-c", "--calibrate", required=False, action="store_true",
+        arg_map.add_argument("-c", "--calibrate", required=False,
+                             action="store_true",
                              help="Calibrate camera prior to running program")
-        arg_map.add_argument("-o", "--original", required=False, action="store_true",
+        arg_map.add_argument("-o", "--original", required=False,
+                             action="store_true",
                              help="Show the Original unwarped/unscaled image")
-        arg_map.add_argument("-m", "--mask", required=False, action="store_true",
+        arg_map.add_argument("-m", "--mask", required=False,
+                             action="store_true",
                              help="Show the color Masked Image")
-        arg_map.add_argument("-e", "--edges", required=False, action="store_true",
+        arg_map.add_argument("-e", "--edges", required=False,
+                             action="store_true",
                              help="Show Edges/Contours on original image")
-        arg_map.add_argument("-w", "--warped", required=False, action="store_true",
-                             help="Show the Warped (perspective shifted) image")
-        arg_map.add_argument("-n", "--neural", required=False, action="store_true",
-                             help="Show the Image to be passed to the Neural Network")
+        arg_map.add_argument("-w", "--warped", required=False,
+                             action="store_true",
+                             help="Show the Warped perspective-shifted image")
+        arg_map.add_argument("-n", "--neural", required=False,
+                             action="store_true",
+                             help="Show the Image to be passed to the ANN")
         arg_map.add_argument("-l", "--loglevel", required=False,
                              help="Log level to be used")
         return vars(arg_map.parse_args())
-
 
     def loop(self, perspective, img_map=False):
         '''
@@ -135,7 +145,7 @@ class RBI(object):
             'BALL': 2,
             'SCORE': 0,
             'HOMERUN': 0
-            }
+        }
 
         while True:
             _, frame = self.feed.read()
@@ -156,7 +166,8 @@ class RBI(object):
                         active_msg = True
                         active_led = led_map[key]
                         self.arduino.write(active_led, 1)
-                        self._log.debug("Turning LED " + str(active_led) + " ON")
+                        log_msg = "Turning LED " + str(active_led) + " ON"
+                        self._log.debug(log_msg)
                         if key is 'OUT':
                             out_count += 1
                         if out_count % 3 == 0:
@@ -175,15 +186,14 @@ class RBI(object):
             nn_frame = self.prepare_nn_frame(warped,
                                              self.nn_matrix_info['height'],
                                              self.nn_matrix_info['width'])
-            #print "DEBUG - nn_frame.shape = %s" % str(nn_frame.shape)
+            # print "DEBUG - nn_frame.shape = %s" % str(nn_frame.shape)
             if img_map and img_map['neural']:
                 cv2.imshow('NN', nn_frame)
 
-            #nn_vector = nn_frame.ravel()
+            # nn_vector = nn_frame.ravel()
 
             if cv2.waitKey(1) & 0xFF == ord('1'):
                 break
-
 
     @staticmethod
     def warp_frame(frame, perspective):
@@ -201,11 +211,11 @@ class RBI(object):
         translation_matrix = perspective['M']
         height = perspective['h']
         width = perspective['w']
-        #c = perspective['c']
-        warped = cv2.warpPerspective(frame, translation_matrix, (width, height))
-
+        # c = perspective['c']
+        warped = cv2.warpPerspective(frame,
+                                     translation_matrix,
+                                     (width, height))
         return warped
-
 
     @staticmethod
     def prepare_nn_frame(frame, height=None, width=None):
@@ -229,17 +239,18 @@ class RBI(object):
             None
         '''
         grayed = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        #scaled = imgutils.scale_2d(grayed, height, width)
-        scaled = cv2.resize(grayed, (height, width), interpolation=cv2.INTER_AREA)
+        # scaled = imgutils.scale_2d(grayed, height, width)
+        scaled = cv2.resize(grayed, (height, width),
+                            interpolation=cv2.INTER_AREA)
         return scaled
 
-    
-    def load_game(self,
-                  emulator_path='/usr/bin/fceux',
-                  #emulator_path='/usr/bin/nestopia',
-                  #emulator_path='/usr/bin/fakenes',
-                  rom_path='/home/jreinhart/projects/rbi/roms/RBI-Unlicensed.zip',
-                  fullscreen=False):
+    def load_game(
+            self,
+            emulator_path='/usr/bin/fceux',
+            # emulator_path='/usr/bin/nestopia',
+            # emulator_path='/usr/bin/fakenes',
+            rom_path='/home/jreinhart/projects/rbi/roms/RBI-Unlicensed.zip',
+            fullscreen=False):
         subprocess.Popen([emulator_path, rom_path])
         if fullscreen:
             time.sleep(0.25)
@@ -251,7 +262,6 @@ class RBI(object):
     def restart_game(self):
         self._log.info("Calling the restart commond on Keyboard")
         self.kbrd.restart()
-
 
     def random_select_start(self):
         '''
@@ -265,13 +275,11 @@ class RBI(object):
         self.kbrd.select()
         self.kbrd.start()
 
-
-    def __configure_logger(self, log_level):
+    def _configure_logger(self, log_level):
         logging.basicConfig(level=log_level)
         self._log = logging.getLogger('RBI_Class')
 
-
-    def __configure_camera(self):
+    def _configure_camera(self):
         self.camera = camera.Camera()
         self.feed = self.camera.get_feed()
 
@@ -280,19 +288,19 @@ class RBI(object):
         cam_cfg = json.load(open(directory + '/../config/camera.cfg'))
         self.camera.set_brightness(int(cam_cfg['Brightness']))
         self.camera.set_focus(int(cam_cfg['Focus']))
-        self._log.debug("Brightness set to %s", str(self.camera.get_brightness()))
+        self._log.debug(
+            "Brightness set to %s", str(self.camera.get_brightness()))
         self._log.debug("Focus set to %s", str(self.camera.get_focus()))
 
-
-    def __configure_arduino(self, port='/dev/ttyACM0', baudrate=57600):
+    def _configure_arduino(self, port='/dev/ttyACM0', baudrate=57600):
         self.arduino = arduino.Arduino(port=port, baudrate=baudrate)
-        self._log.debug("Configured Arduino on port %s, baudrate %d", port, baudrate)
+        self._log.debug(
+            "Configured Arduino on port %s, baudrate %d", port, baudrate)
         self.arduino.write(BLUE, OFF)
         time.sleep(0.25)
         self.arduino.write(GREEN, OFF)
         time.sleep(0.25)
         self.arduino.write(RED, SLOW_BLINK)
-
 
     def __del__(self):
         try:
@@ -311,12 +319,12 @@ def main():
     pp(arg_dict)
 
     blue_hex = "063793"
-    #blue_hex = "052e7a"
+    # blue_hex = "052e7a"
 
-    #blue_hex = "052C72"
+    # blue_hex = "052C72"
 
-    #blue_hex = "042562"
-    #blue_hex = "031c49"
+    # blue_hex = "042562"
+    # blue_hex = "031c49"
 
     matrix_height = 84
     matrix_width = 84
@@ -331,10 +339,10 @@ def main():
 
     rbi.load_game()
 
-    #if arg_dict['calibrate']:
-    #    camutils.calibrate_camera(rbi.feed, img_map)
+    # if arg_dict['calibrate']:
+    #     camutils.calibrate_camera(rbi.feed, img_map)
 
-    #perspective = camutils.get_perspective(rbi.feed, blue_hex, 0.25, img_map)
+    # perspective = camutils.get_perspective(rbi.feed, blue_hex, 0.25, img_map)
     perspective = camutils.get_perspective(rbi.feed, blue_hex, 0.35, img_map)
     rbi._log.info("Found the Perspective")
     rbi.arduino.write(BLUE, ON)
@@ -344,6 +352,6 @@ def main():
     cv2.destroyAllWindows()
     rbi.loop(perspective, img_map)
 
+
 if __name__ == '__main__':
     main()
-
