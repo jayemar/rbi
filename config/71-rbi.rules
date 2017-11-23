@@ -1,0 +1,10 @@
+# Allow the use of the virtual keyboard used with the RBI program
+#
+# sudo groupadd -f udev_group
+# sudo usermod -aG udev_group <username>
+# sudo cp 71-rbi.rules /etc/uduev/rules.d/
+# sudo udevadm control --reload-rules
+# sudo rmmod uinput
+# sudo modprobe uinput
+#
+SUBSYSTEM=="misc", KERNEL=="uinput", GROUP:="udev_group", MODE:="0660"
