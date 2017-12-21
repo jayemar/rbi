@@ -1,14 +1,21 @@
 #!/usr/bin/env python
 
 import cv2
+import sys
 
-from lib import camera
+sys.path.append('..')
+
+from lib import camera as cameralib
 from lib import imgutils
 
-camera = camera.Camera()
+camera = cameralib.Camera()
 feed = camera.get_feed()
 
 while(True):
+    if not feed.isOpened():
+        print("Feed is not open; exiting...")
+        sys.exit(1)
+
     ret, frame = feed.read()
     if not ret:
         continue

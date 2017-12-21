@@ -23,12 +23,21 @@ IMG_MAP = {'original': False, 'mask': False, 'edges': False, 'neural': False}
 
 
 def scale_2d(orig_matrix, height=None, width=None):
-    '''
+    """
     Do some bad ass scaling
-    @height: height of output matrix
-    @width: width of output matrix
-    '''
 
+    Parameters
+    ----------
+    height : integer
+        height of output matrix
+    width : integer
+        width of output matrix
+
+    Returns
+    -------
+    Scaled matrix
+
+    """
     matrix = orig_matrix.copy()
 
     if len(matrix.shape) != 2:
@@ -62,20 +71,25 @@ def scale_2d(orig_matrix, height=None, width=None):
 
 
 def get_perspective(feed, hex_color, tolerance=0.10, img_map=False):
-    '''
+    """
     Find a rectangular perspective to represent a head-on view of the image
 
-    Parameters:
-        hex_color   - color value of rectangle representing the perspective in
-                      the image
-        tolerance   - optional; amount of tolerance in the hex color value
-        img_map     - optional; map of intermediate images to be shown during
-                      the perspective-finding process
-    Return value:
-        map including height and width of perspective, the transform_matrix to
-        achive the perspective, and the contour of the selected perspective in
-        the original image
-    '''
+    Parameters
+    ----------
+    hex_color : string (represents hex value)
+        color value of rectangle representing the perspective in the image
+    tolerance : float
+        amount of tolerance in the hex color value
+    img_map : dictionary
+        map of intermediate images to be shown during the perspective-finding
+        process
+
+    Returns
+    -------
+    map including height and width of perspective, the transform_matrix to
+    achieve the perspective, and the contour of the selected perspective in
+    the original image
+    """
 
     contour = None
     while contour is None:
@@ -133,14 +147,18 @@ def get_perspective(feed, hex_color, tolerance=0.10, img_map=False):
 
 
 def _get_height_width(rect):
-    '''
+    """
     Get height and width of a rectangle
 
-    Parameters:
-        rect - (top_left, top_right, bottom_right, bottom_left)
-    Return value:
-        (max_height, max_width)
-    '''
+    Parameters
+    ----------
+    rect :
+        (top_left, top_right, bottom_right, bottom_left)
+
+    Returns
+    -------
+    (max_height, max_width)
+    """
     (top_left, top_right, bottom_right, bottom_left) = rect
     # Compute the Width of the new image
     (top_left, top_right, bottom_right, bottom_left) = rect
@@ -162,31 +180,32 @@ def _get_height_width(rect):
     return (max_height, max_width)
 
 
-def calibrate_camera(feed, timeout=120, known_word="Welcome", img_map=False):
-    '''
-    *** NOT YET IMPLEMENTED ***
-
+def calibrate_camera(feed, timeout=9, known_word="TENGEN", img_map=False):
+    """
     Tweak various camera parameters (brightness, focus, contrast, etc) in
     order to get a good fix on the desired viewing area and to be able to
     recognize characters for optical character recognition (OCR).
 
-    Parameters:
-        timeout     - optional; the maximum number of seconds to spend on the
-                      calibration process, after which time the camera will be
-                      set to the parameters that seemed to be the best before
-                      the timeout
-        known_word  - optional; a word that will be known to show up that the
-                      camera can look for in order to determine OCR
-                      performance
-        img_map     - optional; map of intermediate frames to be shown during
-                      the calibration process
-    Return value:
-        None
-    '''
-    pass
+    Parameters
+    ----------
+    timeout : number
+        the maximum number of seconds to spend on the calibration process,
+        after which time the camera will be set to the parameters that seemed
+        to be the best before the timeout
+    known_word : string
+        a word that will be known to show up that the camera can look for in
+        order to determine OCR performance
+    img_map : dictionary
+        map of intermediate frames to be shown during the calibration process
+
+    Returns
+    -------
+    None
+    """
     # while True:
     #     _, frame = feed.read()
     #     print "Frame Mean: %f" % np.mean(frame)
+    pass
 
 
 def _get_screen_contour(frame, hex_color, tolerance, img_map=False):
@@ -236,5 +255,4 @@ def _get_screen_contour(frame, hex_color, tolerance, img_map=False):
             if cv2.waitKey(1) & 0xFF == ord('1'):
                 break
 
-    # print("DEBUG: Returning from _get_screen_contour")
     return contour

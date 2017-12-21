@@ -1,7 +1,7 @@
 pyserial
 evdev
+numpy
 tensorflow
-keras
 sklearn
 jupyter
 jupyter_nbextensions_configurator

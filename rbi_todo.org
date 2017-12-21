@@ -1,0 +1,55 @@
+* RBI TODO List
+  
+** MISC
+*** TODO Allow use of /dev/uinput without chmod +0666
+*** TODO Look into platformio for Arduino
+
+** Camera
+*** Calibration
+**** TODO Calibrate to better detect field of play
+**** TODO Run calibration function on button push
+
+** Arduino
+*** Indicators
+**** TODO Light LEDs to show number of balls
+**** TODO Light LEDs to show number of strikes
+**** TODO Light LEDs to show number of outs
+**** TODO Light LEDs to show position of players on bases
+**** TODO Implement spinner for camera calibration
+
+** Agents
+*** Batter
+**** TODO Swing the bat
+**** TODO Make contact with the ball
+**** TODO Don't swing at a ball
+*** Pitcher
+**** TODO Don't push buttons after releasing pitch; straight-pitch mode
+*** Fielder
+**** TODO Move towards the ball
+**** TODO Catch a ball
+**** TODO Throw the ball to a base
+**** TODO Throw a runner out at first
+*** Text Reader
+**** TODO Recognize when work popup appears in middle of screen
+**** TODO Recognize different words in screen popup
+**** TODO Recognize run(s) scored
+**** TODO Recognize batter's name
+**** TODO Recognize batter's batting average
+**** TODO Recognize pitcher's name
+**** TODO Recognize pitcher's ERA
+**** TODO Create database of batters and performance
+**** TODO Create database of pitchers and performance
+**** TODO Use sabermetrics against player databases
+
+** ML Network
+*** Potential Features
+ 1. score difference
+ 2. current inning
+ 3. home or away
+ 4. number of outs
+ 5. bullpen count
+ 6. bench count
+ 7. baserunner mask
+ 8. pitch count
+ 9. ball/strike mask
+ 10. audio; pitch is helpful for fly balls

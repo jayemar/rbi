@@ -285,7 +285,7 @@ class RBI(object):
 
         directory = os.path.dirname(os.path.abspath(
             inspect.getfile(inspect.currentframe())))
-        cam_cfg = json.load(open(directory + '/../config/camera.cfg'))
+        cam_cfg = json.load(open(directory + '/../cfg/camera.cfg'))
         self.camera.set_brightness(int(cam_cfg['Brightness']))
         self.camera.set_focus(int(cam_cfg['Focus']))
         self._log.debug(
