@@ -2,7 +2,7 @@ ls -l /dev/uinput
 
 /etc/udev/*
 
-Add selt to 'input' group (for /dev/input/*)
+Add self to 'input' group (for /dev/input/*)
 
 
 evtest  - input device event monitor and query tool

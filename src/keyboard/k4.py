@@ -54,4 +54,3 @@ if __name__ == '__main__':
     ui.write(e.EV_KEY, e.KEY_G, 0)
     ui.syn()
     time.sleep(0.250)
-
