@@ -1,19 +1,26 @@
 #!/usr/bin/env python
 
-'''
+"""
 Control an attached USB webcam using the 'uvcdynctrl' utility
-'''
+"""
 
 import cv2
+import logging
 import subprocess
+import zmq
 
+from zmq.eventloop import ioloop
+
+PUBLISH_PORT = 5000
+REPLY_PORT = 5001
+LOG_FILENAME = '/var/log/rbi/camera.log'
 
 class Camera(object):
-    '''
+    """
     Object representing an attached USB webcam
-    '''
+    """
     def __init__(self, device_num=0):
-        '''
+        """
         Connect to camera at device_num
 
         Optional Args:
@@ -22,28 +29,44 @@ class Camera(object):
             None
         Raises:
             None
-        '''
+        """
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            filename=LOG_FILENAME,
+            filemode='a')
+        self._log = logging.getLogger('Camera')
+
         self.feed = cv2.VideoCapture(device_num)
 
+        self.ctx = zmq.Context()
+        self._log.info("ZMQ context created")
+        self._configure_messaging()
+
     def __del__(self):
-        '''
+        """
         Release camera feed and close all OpenCV windows
-        '''
+        """
         self.feed.release()
         cv2.destroyAllWindows()
+        self.publisher.close()
+        self.replier.close()
+        self.ctx.destroy()
+        print("ZMQ context destroyed")
 
-    def get_feed(self):
-        '''
-        Get image feed from camera
+    def _configure_messaging(self):
+        self._create_publisher()
+        self._create_replier()
 
-        Args:
-            None
-        Returns:
-            a cv2.VideoCapture object
-        Raises:
-            None
-        '''
-        return self.feed
+    def _create_publisher(self):
+        self.publisher = self.ctx.socket(zmq.PUB)
+        self.publisher.bind('tcp://*:%s' % PUBLISH_PORT)
+        self._log.debug("Listening on publisher socket")
+
+    def _create_replier(self):
+        self.replier = self.ctx.socket(zmq.REP)
+        self.replier.bind('tcp://*:%s' % REPLY_PORT)
+        self._log.debug("Listening on replier socket")
 
     def get_live_stream(self):
         while True:
@@ -90,3 +113,36 @@ class Camera(object):
         else:
             resp = subprocess.check_output(["uvcdynctrl", "-g", cmd])
         return resp
+
+    def calibrate_camera(self, timeout=9, known_word="TENGEN", img_map=False):
+        """
+        Tweak various camera parameters (brightness, focus, contrast, etc) in
+        order to get a good fix on the desired viewing area and to be able to
+        recognize characters for optical character recognition (OCR).
+
+        Parameters
+        ----------
+        timeout : number
+            the maximum number of seconds to spend on the calibration process,
+            after which time the camera will be set to the parameters that
+            seemed to be the best before the timeout
+            The Blue Screen stays up for roughly 10 seconds
+        known_word : string
+            a word that will be known to show up that the camera can look for
+            in order to determine OCR performance
+        img_map : dictionary
+            map of intermediate frames to be shown during the calibration
+            process
+
+        Returns
+        -------
+        None
+        """
+        # while True:
+        #     _, frame = feed.read()
+        #     print "Frame Mean: %f" % np.mean(frame)
+        pass
+
+
+if __name__ == '__main__':
+    camera = Camera()
