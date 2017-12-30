@@ -24,7 +24,9 @@ print("Press '1' on the image to close")
 while looping:
     try:
         frame_dict = pub.recv_pyobj()
-        cv2.imshow('Raw Frame', frame_dict.get('raw', []))
+        # cv2.imshow('Raw Frame', frame_dict.get('raw', []))
+        for label, frame in frame_dict.items():
+            cv2.imshow(label, frame)
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord('1'):
