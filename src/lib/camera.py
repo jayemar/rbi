@@ -7,13 +7,13 @@ Control an attached USB webcam using the 'uvcdynctrl' utility
 import cv2
 import logging
 import subprocess
+import time
 import zmq
-
-from zmq.eventloop import ioloop
 
 PUBLISH_PORT = 5000
 REPLY_PORT = 5001
 LOG_FILENAME = '/var/log/rbi/camera.log'
+
 
 class Camera(object):
     """
@@ -35,6 +35,7 @@ class Camera(object):
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
             filename=LOG_FILENAME,
             filemode='a')
+        logging.Formatter.converter = time.gmtime
         self._log = logging.getLogger('Camera')
 
         self.feed = cv2.VideoCapture(device_num)
@@ -67,6 +68,20 @@ class Camera(object):
         self.replier = self.ctx.socket(zmq.REP)
         self.replier.bind('tcp://*:%s' % REPLY_PORT)
         self._log.debug("Listening on replier socket")
+        poller = zmq.Poller()
+        poller.register(self.replier, zmq.POLLIN)
+        polling = True
+        while polling:
+            socks = dict(poller.poll())
+            if self.replier in socks and socks[self.replier] == zmq.POLLIN:
+                msg = self.replier.recv_pyobj()
+                self._log.debug("Received message: %s" % str(msg))
+                if msg.lower() == 'close':
+                    self._log.info("Closing Camera")
+                    polling = False
+                    self.replier.send_pyobj("Closing Camera")
+                else:
+                    self.replier.send_pyobj("Rgr, Roger")
 
     def get_live_stream(self):
         while True:
