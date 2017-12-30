@@ -1,51 +1,40 @@
 #!/usr/bin/env python
 
 import cv2
-import sys
+import zmq
 
-sys.path.append('..')
+ctx = zmq.Context()
+pub = ctx.socket(zmq.SUB)
+pub.connect('tcp://localhost:5000')
+pub.setsockopt(zmq.SUBSCRIBE, b'')
 
-from lib import camera as cameralib
-from lib import imgutils
+'''
+mask = imgutils.get_color_mask(frame, "052C72", 0.25)
+cv2.imshow('Blue Mask', mask)
 
-camera = cameralib.Camera()
-feed = camera.get_feed()
+blurred = cv2.bilateralFilter(mask, 11, 17, 17)
+# cv2.imshow('Blurred', blurred)
 
-while(True):
-    if not feed.isOpened():
-        print("Feed is not open; exiting...")
-        sys.exit(1)
+edged = cv2.Canny(blurred, 30, 200)
+# cv2.imshow('Edged', edged)
+'''
 
-    ret, frame = feed.read()
-    if not ret:
-        continue
+looping = True
+print("Press '1' on the image to close")
+while looping:
+    try:
+        frame_dict = pub.recv_pyobj()
+        cv2.imshow('Raw Frame', frame_dict.get('raw', []))
 
-    cv2.imshow('Raw Frame', frame)
-
-    mask = imgutils.get_color_mask(frame, "052C72", 0.25)
-    cv2.imshow('Blue Mask', mask)
-
-    blurred = cv2.bilateralFilter(mask, 11, 17, 17)
-    # cv2.imshow('Blurred', blurred)
-
-    edged = cv2.Canny(blurred, 30, 200)
-    # cv2.imshow('Edged', edged)
-
-    key = cv2.waitKey(1) & 0xFF
-    if key == ord('1'):
-        break
-    elif key == ord('2'):
-        b = int(camera.get_brightness())
-        new_b = b - 5
-        camera.set_brightness(new_b)
-        print("Brightness set to %d" % new_b)
-    elif key == ord('3'):
-        b = int(camera.get_brightness())
-        new_b = b + 5
-        camera.set_brightness(new_b)
-        print("Brightness set to %d" % new_b)
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('1'):
+            break
+    except KeyboardInterrupt:
+        looping = False
+    except Exception as err:
+        print("Exception receiving frames: %s" % err)
 
 
-# When everything is done, release the capture
-feed.release()
+pub.close()
+ctx.destroy()
 cv2.destroyAllWindows()
