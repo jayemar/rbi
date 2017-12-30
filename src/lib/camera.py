@@ -7,6 +7,7 @@ Control an attached USB webcam using the 'uvcdynctrl' utility
 import cv2
 import logging
 import subprocess
+import threading
 import time
 import zmq
 
@@ -38,6 +39,7 @@ class Camera(object):
         logging.Formatter.converter = time.gmtime
         self._log = logging.getLogger('Camera')
 
+        self.is_active = True
         self.feed = cv2.VideoCapture(device_num)
 
         self.ctx = zmq.Context()
@@ -48,16 +50,17 @@ class Camera(object):
         """
         Release camera feed and close all OpenCV windows
         """
+        self.publisher.close()
+        # self.replier_thread.join(timeout=0)
+        self.ctx.destroy()
         self.feed.release()
         cv2.destroyAllWindows()
-        self.publisher.close()
-        self.replier.close()
-        self.ctx.destroy()
-        print("ZMQ context destroyed")
+        print("Camera shutdown")
 
     def _configure_messaging(self):
         self._create_publisher()
-        self._create_replier()
+        self.replier_thread = threading.Thread(target=self._create_replier)
+        self.replier_thread.start()
 
     def _create_publisher(self):
         self.publisher = self.ctx.socket(zmq.PUB)
@@ -70,18 +73,33 @@ class Camera(object):
         self._log.debug("Listening on replier socket")
         poller = zmq.Poller()
         poller.register(self.replier, zmq.POLLIN)
-        polling = True
-        while polling:
+        while self.is_active:
             socks = dict(poller.poll())
             if self.replier in socks and socks[self.replier] == zmq.POLLIN:
                 msg = self.replier.recv_pyobj()
                 self._log.debug("Received message: %s" % str(msg))
                 if msg.lower() == 'close':
                     self._log.info("Closing Camera")
-                    polling = False
-                    self.replier.send_pyobj("Closing Camera")
+                    self.is_active = False
+                    break
                 else:
                     self.replier.send_pyobj("Rgr, Roger")
+        self.replier.close()
+        # self.__del__()
+
+    def publish_frames(self):
+        if not self.feed.isOpened():
+            self._log.error("Feed is not open")
+        else:
+            self._log.info("Publishing camera frames")
+            while self.is_active:
+                success, frame = self.feed.read()
+                if success:
+                    self.publisher.send_pyobj(['Camera', frame])
+                    # self.publisher.send_pyobj(frame)
+                else:
+                    self._log.error("Unable to read frame from camera")
+                    break
 
     def get_live_stream(self):
         while True:
@@ -161,3 +179,4 @@ class Camera(object):
 
 if __name__ == '__main__':
     camera = Camera()
+    camera.publish_frames()
