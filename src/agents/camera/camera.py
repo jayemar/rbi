@@ -4,20 +4,18 @@
 Control an attached USB webcam using the 'uvcdynctrl' utility
 """
 import imgutils
+from agent import MessagingAgent
 
 import cv2
-import logging
 import numpy as np
 import subprocess
 import threading
-import time
-import zmq
 
 from functools import reduce
 
+LOG_FILENAME = '/var/log/rbi/camera.log'
 PUBLISH_PORT = 5000
 REPLY_PORT = 5001
-LOG_FILENAME = '/var/log/rbi/camera.log'
 # HEX_BLUE = "052C72"
 HEX_BLUE = "153C82"
 
@@ -28,7 +26,7 @@ warp_mask = 0x04
 DEFAULT_MASK = 7
 
 
-class Camera(object):
+class Camera(MessagingAgent):
     """
     Object representing an attached USB webcam
     """
@@ -36,30 +34,19 @@ class Camera(object):
         """
         Connect to camera at device_num
 
-        Optional Args:
-            device_num: id number of device to use
-        Returns:
-            None
-        Raises:
-            None
+        Parameters
+        ----------
+        device_num : int
+            id number of device to use
+        Returns
+        -------
+        None
         """
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            filename=LOG_FILENAME,
-            filemode='a')
-        logging.Formatter.converter = time.gmtime
-        self._log = logging.getLogger('Camera')
-
+        super(Camera, self).__init__(publish_port=PUBLISH_PORT,
+                                     reply_port=REPLY_PORT)
         self.perspective = None
         self.frame_mask = DEFAULT_MASK
-
-        self.is_active = True
         self.feed = cv2.VideoCapture(device_num)
-
-        self.ctx = zmq.Context()
-        self._log.info("ZMQ context created")
-        self._configure_messaging()
 
     def __del__(self):
         """
@@ -77,34 +64,8 @@ class Camera(object):
             target=self._create_replier)
         self.replier_thread.start()
 
-    def _create_publisher(self):
-        self.publisher = self.ctx.socket(zmq.PUB)
-        self.publisher.bind('tcp://*:%s' % PUBLISH_PORT)
-        self._log.debug("Listening on publisher socket")
-
-    def _create_replier(self):
-        self.replier = self.ctx.socket(zmq.REP)
-        self.replier.bind('tcp://*:%s' % REPLY_PORT)
-        self._log.debug("Listening on replier socket")
-        poller = zmq.Poller()
-        poller.register(self.replier, zmq.POLLIN)
-        while self.is_active:
-            try:
-                socks = dict(poller.poll())
-                if self.replier in socks and socks[self.replier] == zmq.POLLIN:
-                    msg = self.replier.recv_pyobj()
-                    self._log.debug("Received message: %s" % str(msg))
-                    if msg.lower() == 'close':
-                        self.is_active = False
-                    else:
-                        self._handle_request(msg)
-            except KeyboardInterrupt:
-                self.is_active = False
-        self._log.info("Closing Reply socket")
-        self.replier.close()
-
     def _handle_request(self, msg):
-        """Handle Camera Settings:
+        """ Handle Camera Settings:
         b: brightness
         c: contract
         s: saturation
@@ -112,35 +73,38 @@ class Camera(object):
         h: sharpness
         m: frame mask
         """
-        if msg.lower() == 'b':
+        if msg == 'q':
+            self.is_active = False
+            self.replier.send_pyobj("Command received to close %s" % self.name)
+        elif msg == 'b':
             self.replier.send_pyobj(self.get_brightness())
-        elif msg.lower() == 'c':
+        elif msg == 'c':
             self.replier.send_pyobj(self.get_contrast())
-        elif msg.lower() == 's':
+        elif msg == 's':
             self.replier.send_pyobj(self.get_saturation())
-        elif msg.lower() == 'f':
+        elif msg == 'f':
             self.replier.send_pyobj(self.get_focus())
-        elif msg.lower() == 'h':
+        elif msg == 'h':
             self.replier.send_pyobj(self.get_sharpness())
-        elif msg.lower() == 'm':
+        elif msg == 'm':
             self.replier.send_pyobj(self.get_frame_mask())
         else:
-            if msg.lower().startswith('b'):
+            if msg.startswith('b'):
                 cmd = self.set_brightness
-            elif msg.lower().startswith('c'):
+            elif msg.startswith('c'):
                 cmd = self.set_contrast
-            elif msg.lower().startswith('s'):
+            elif msg.startswith('s'):
                 cmd = self.set_saturation
-            elif msg.lower().startswith('f'):
+            elif msg.startswith('f'):
                 cmd = self.set_focus
-            elif msg.lower().startswith('h'):
+            elif msg.startswith('h'):
                 cmd = self.set_sharpness
-            elif msg.lower().startswith('m'):
+            elif msg.startswith('m'):
                 cmd = self.set_frame_mask
             try:
                 level = int(msg[1:])
                 cmd(level)
-                self.replier.send_pyobj("%s: %d" % (str(cmd), level))
+                self.replier.send_pyobj(level)
             except Exception:
                 self.replier.send_pyobj("Unknown command: %s" % msg)
 
@@ -411,6 +375,4 @@ class Camera(object):
 
 if __name__ == '__main__':
     camera = Camera()
-    print("Publishing on port %d" % PUBLISH_PORT)
-    print("Messaging on port %d" % REPLY_PORT)
     camera.publish_frames()
