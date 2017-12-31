@@ -68,10 +68,7 @@ class MessagingAgent(object):
                 if self.replier in socks and socks[self.replier] == zmq.POLLIN:
                     msg = self.replier.recv_pyobj()
                     self._log.debug("Received message: %s" % str(msg))
-                    if msg == 'q':
-                        self.is_active = False
-                    else:
-                        self._handle_request(msg)
+                    self._handle_request(msg)
             except KeyboardInterrupt:
                 self.is_active = False
         self._log.info("Closing Reply socket")
