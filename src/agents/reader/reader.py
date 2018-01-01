@@ -48,7 +48,7 @@ class Reader(MessagingAgent):
             if self.display_frames and 'warped' in msg:
                 frame = self._preprocess_frame(msg.get('warped'),
                                                threshold=self.threshold)
-                cv2.imshow("Reader View", frame)
+                cv2.imshow("Reader View", msg.get('warped'))
                 cv2.waitKey(1) & 0xFF
 
     def _preprocess_frame(self, frame, threshold=0.5):
@@ -80,12 +80,16 @@ class Reader(MessagingAgent):
         return success
 
     def _handle_request(self, msg):
-        """ Handle Reader configuration
-        r: toggle active reader
-        d: toggle displaying frame in new window
-        s: save screenshot to disk
-        """
-        if msg == 'close':
+        """ Handle Reader configuration """
+        options = {'h or ?': "help; show these options",
+                   'q': "quit/close agent",
+                   'r': "toggle active reader",
+                   'd': "toggle debug mode to display frame in new window",
+                   'b': "threshold for black/white conversion",
+                   't': "save screenshot to disk"}
+        if msg in ['h', '?']:
+            self.replier.send_pyobj(options)
+        elif msg == 'q':
             self.is_active = False
             self.replier.send_pyobj("Command received to close %s" % self.name)
         elif msg == 'r':
@@ -97,11 +101,20 @@ class Reader(MessagingAgent):
             else:
                 self.replier.send_pyobj("Disabling Camera frame subscriber")
                 self.camera_subscriber_thread.join(timeout=2.0)
+                cv2.destroyAllWindows()
         elif msg == 'd':
             self.display_frames = self.display_frames ^ True
             self.replier.send_pyobj("Displaying frames: %s"
                                     % str(self.display_frames))
-        elif msg == 's':
+        elif msg.startswith('b'):
+            try:
+                thresh = float(msg[1:])
+                self.threshold = thresh
+            except Exception:
+                pass
+            finally:
+                self.replier.send_pyobj("Threshold: %f" % self.threshold)
+        elif msg == 't':
             if self.receiving_frames:
                 if self._take_screenshot():
                     self.replier.send_pyobj("Screenshot saved")
@@ -110,14 +123,6 @@ class Reader(MessagingAgent):
             else:
                 self._log.warn("Not currently receiving frames")
                 self.replier.send_pyobj("Not currently receiving frames")
-        elif msg.startswith('t'):
-            try:
-                thresh = float(msg[1:])
-                self.threshold = thresh
-            except Exception:
-                pass
-            finally:
-                self.replier.send_pyobj("Threshold: %f" % self.threshold)
         else:
             self.replier.send_pyobj("Unknown command: %s" % msg)
 

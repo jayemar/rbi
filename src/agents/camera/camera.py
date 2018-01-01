@@ -6,10 +6,12 @@ Control an attached USB webcam using the 'uvcdynctrl' utility
 import imgutils
 from agent import MessagingAgent
 
+import arrow
 import cv2
 import numpy as np
 import subprocess
 import threading
+import zmq
 
 from functools import reduce
 
@@ -23,7 +25,7 @@ HEX_BLUE = "153C82"
 raw_mask = 0x01
 contour_mask = 0x02
 warp_mask = 0x04
-DEFAULT_MASK = 7
+DEFAULT_MASK = 5
 
 
 class Camera(MessagingAgent):
@@ -47,6 +49,11 @@ class Camera(MessagingAgent):
         self.perspective = None
         self.frame_mask = DEFAULT_MASK
         self.feed = cv2.VideoCapture(device_num)
+        self.is_debug = False
+        self.debug_reader = FrameReader()
+        # self.debug_thread = threading.Thread(
+        #     target=self.debug_reader.show_frames, args=[self.is_debug])
+        # self.debug_reader.show_frames(enabled=self.is_debug)
 
     def __del__(self):
         """
@@ -65,17 +72,43 @@ class Camera(MessagingAgent):
         self.replier_thread.start()
 
     def _handle_request(self, msg):
-        """ Handle Camera Settings:
-        b: brightness
-        c: contract
-        s: saturation
-        f: focus
-        h: sharpness
-        m: frame mask
-        """
-        if msg == 'q':
+        """ Handle Camera Settings """
+        options = {'h or ?': "help; show these options",
+                   'q': "quit/close agent",
+                   'd': "toggle debug mode; display frames",
+                   't': "take screenshot of perspective view",
+                   'r': "reset/recapture perspective",
+                   'z': "zoom",
+                   'b': "brightness",
+                   'c': "contrast",
+                   's': "saturation",
+                   'f': "focus",
+                   'p': "sharpness",
+                   'm': "frame mask"}
+        if msg in ['h', '?']:
+            self.replier.send_pyobj(options)
+        elif msg == 'q':
             self.is_active = False
             self.replier.send_pyobj("Command received to close %s" % self.name)
+        elif msg == 'd':
+            self.is_debug = self.is_debug ^ True
+            self.debug_reader.set_enabled(self.is_debug)
+            self.replier.send_pyobj("Viewing frames: %s"
+                                    % str(self.debug_reader.is_enabled()))
+        elif msg == 't':
+            if self.perspective:
+                img_name = self._take_screenshot()
+                if img_name:
+                    self.replier.send_pyobj("Screenshot saved: %s" % img_name)
+                else:
+                    self.replier.send_pyobj("Unable to save screenshot")
+            else:
+                self.replier.send_pyobj("Perspective view not yet availble")
+        elif msg == 'r':
+            self.perspective = []
+            self.replier.send_pyobj("Perspective reset")
+        elif msg == 'z':
+            self.replier.send_pyobj(self.get_zoom())
         elif msg == 'b':
             self.replier.send_pyobj(self.get_brightness())
         elif msg == 'c':
@@ -84,12 +117,14 @@ class Camera(MessagingAgent):
             self.replier.send_pyobj(self.get_saturation())
         elif msg == 'f':
             self.replier.send_pyobj(self.get_focus())
-        elif msg == 'h':
+        elif msg == 'p':
             self.replier.send_pyobj(self.get_sharpness())
         elif msg == 'm':
             self.replier.send_pyobj(self.get_frame_mask())
         else:
-            if msg.startswith('b'):
+            if msg.startswith('z'):
+                cmd = self.set_zoom
+            elif msg.startswith('b'):
                 cmd = self.set_brightness
             elif msg.startswith('c'):
                 cmd = self.set_contrast
@@ -97,7 +132,7 @@ class Camera(MessagingAgent):
                 cmd = self.set_saturation
             elif msg.startswith('f'):
                 cmd = self.set_focus
-            elif msg.startswith('h'):
+            elif msg.startswith('p'):
                 cmd = self.set_sharpness
             elif msg.startswith('m'):
                 cmd = self.set_frame_mask
@@ -135,6 +170,12 @@ class Camera(MessagingAgent):
                 self.publisher.send_pyobj(frame_dict)
             except KeyboardInterrupt:
                 self.is_active = False
+
+    def get_zoom(self):
+        return self.__uvc("Zoom, Absolute").strip()
+
+    def set_zoom(self, b):
+        self.__uvc("Zoom, Absolute", b)
 
     def get_brightness(self):
         return self.__uvc("Brightness").strip()
@@ -311,10 +352,6 @@ class Camera(MessagingAgent):
         transform_matrix = cv2.getPerspectiveTransform(rect, dst)
         self._log.info("Found Perspective!")
         self.found_perspective = True
-        # return {'w': max_width,
-        #         'h': max_height,
-        #         'M': transform_matrix,
-        #         'c': contour}
         transformation_dict = {'w': max_width,
                                'h': max_height,
                                'M': transform_matrix,
@@ -332,11 +369,6 @@ class Camera(MessagingAgent):
         return cv2.Canny(blurred, 30, 200)
 
     def _get_screen_contour(self, frame, hex_color, tolerance, img_map=False):
-        # blue_frame = imgutils.show_primary(frame.copy(), 'blue', True)
-        # blue_orig = blue_frame.copy()
-        # _, t_frame = cv2.threshold(blue_frame, 50, 200, cv2.THRESH_BINARY)
-        # blurred = cv2.bilateralFilter(t_frame, 11, 17, 17)
-
         mask = self._get_color_mask(frame, hex_color, tolerance)
         blurred = self._get_blur(mask)
         edges = self._get_edges(blurred)
@@ -371,6 +403,68 @@ class Camera(MessagingAgent):
                     break
             '''
         return contour, {'blue': mask, 'blur': blurred, 'edge': edges}
+
+    def _take_screenshot(self):
+        resp = None
+        tmp_subscriber = self.ctx.socket(zmq.SUB)
+        tmp_subscriber.connect('tcp://localhost:%s' % str(self.publish_port))
+        tmp_subscriber.setsockopt(zmq.SUBSCRIBE, b'')
+        try:
+            msg = tmp_subscriber.recv_pyobj()
+            img_time = str(arrow.utcnow().timestamp)
+            img_name = 'reader_screenshot_{0}.tif'.format(img_time)
+            # img_path = '../images/screenshots/' + img_name
+            img_path = img_name
+            if 'warped' in msg:
+                cv2.imwrite(img_path, msg.get('warped'),
+                            (cv2.IMWRITE_PNG_COMPRESSION, 0))
+                resp = img_path
+                self._log.info("Image saved to %s" % img_path)
+                print("Image saved to %s" % img_path)
+        finally:
+            tmp_subscriber.close()
+        return resp
+
+
+class FrameReader(object):
+    def __init__(self, enabled=False):
+        self.ctx = zmq.Context()
+        self.sub = self.ctx.socket(zmq.SUB)
+        self.sub.connect('tcp://localhost:%s' % str(PUBLISH_PORT))
+        self.sub.setsockopt(zmq.SUBSCRIBE, b'')
+        self.enabled = enabled
+        self.looper = threading.Thread(
+            target=self.show_frames, args=[self.enabled])
+        self.looper.start()
+
+    def __del__(self):
+        self.enabled = False
+        self.looper.join(timeout=0.5)
+        self.sub.close()
+        self.ctx.destroy()
+
+    def is_enabled(self):
+        return self.enabled
+
+    def set_enabled(self, enabled):
+        self.enabled = enabled
+        return self.enabled
+
+    def show_frames(self, enabled=True):
+        self.enabled = enabled
+        while True:
+            if self.enabled:
+                try:
+                    frame_dict = self.sub.recv_pyobj()
+                    for label, frame in frame_dict.items():
+                        cv2.imshow(label, frame)
+                    cv2.waitKey(1) & 0xFF
+                except KeyboardInterrupt:
+                    self.enabled = False
+                except Exception as err:
+                    print("Exception receiving frames: %s" % err)
+            else:
+                cv2.destroyAllWindows()
 
 
 if __name__ == '__main__':

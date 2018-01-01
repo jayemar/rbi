@@ -4,9 +4,9 @@ import cv2
 import zmq
 
 ctx = zmq.Context()
-pub = ctx.socket(zmq.SUB)
-pub.connect('tcp://localhost:5000')
-pub.setsockopt(zmq.SUBSCRIBE, b'')
+sub = ctx.socket(zmq.SUB)
+sub.connect('tcp://localhost:5000')
+sub.setsockopt(zmq.SUBSCRIBE, b'')
 
 '''
 mask = imgutils.get_color_mask(frame, "052C72", 0.25)
@@ -23,7 +23,7 @@ looping = True
 print("Press '1' on the image to close")
 while looping:
     try:
-        frame_dict = pub.recv_pyobj()
+        frame_dict = sub.recv_pyobj()
         # cv2.imshow('Raw Frame', frame_dict.get('raw', []))
         for label, frame in frame_dict.items():
             cv2.imshow(label, frame)
@@ -37,6 +37,6 @@ while looping:
         print("Exception receiving frames: %s" % err)
 
 
-pub.close()
+sub.close()
 ctx.destroy()
 cv2.destroyAllWindows()

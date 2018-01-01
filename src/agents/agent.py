@@ -76,7 +76,11 @@ class MessagingAgent(object):
 
     def _handle_request(self, msg):
         """ Handle Requests """
-        if msg == 'close':
+        options = {'h or ?': "help; show these options",
+                   'q': "quite/close agent"}
+        if msg in ['h', '?']:
+            self.replier.send_pyobj(options)
+        if msg == 'q':
             self.is_active = False
             self.replier.send_pyobj("Command received to close Reader")
         else:
