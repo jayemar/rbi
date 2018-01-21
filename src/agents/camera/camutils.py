@@ -159,7 +159,6 @@ def _get_height_width(rect):
     -------
     (max_height, max_width)
     """
-    (top_left, top_right, bottom_right, bottom_left) = rect
     # Compute the Width of the new image
     (top_left, top_right, bottom_right, bottom_left) = rect
     width1 = np.sqrt(((bottom_right[0] - bottom_left[0]) ** 2) +
@@ -178,34 +177,6 @@ def _get_height_width(rect):
     max_width = max(int(width1), int(width2))
 
     return (max_height, max_width)
-
-
-def calibrate_camera(feed, timeout=9, known_word="TENGEN", img_map=False):
-    """
-    Tweak various camera parameters (brightness, focus, contrast, etc) in
-    order to get a good fix on the desired viewing area and to be able to
-    recognize characters for optical character recognition (OCR).
-
-    Parameters
-    ----------
-    timeout : number
-        the maximum number of seconds to spend on the calibration process,
-        after which time the camera will be set to the parameters that seemed
-        to be the best before the timeout
-    known_word : string
-        a word that will be known to show up that the camera can look for in
-        order to determine OCR performance
-    img_map : dictionary
-        map of intermediate frames to be shown during the calibration process
-
-    Returns
-    -------
-    None
-    """
-    # while True:
-    #     _, frame = feed.read()
-    #     print "Frame Mean: %f" % np.mean(frame)
-    pass
 
 
 def _get_screen_contour(frame, hex_color, tolerance, img_map=False):

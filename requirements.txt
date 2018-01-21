@@ -9,3 +9,5 @@ pandas
 matplotlib
 h5py
 arrow
+tornado
+pyzmq

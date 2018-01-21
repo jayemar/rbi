@@ -74,8 +74,8 @@ def get_color_mask(matrix, color_hex, tolerance=0.10):
         grayscale mask matrix
     '''
     (min_val, max_val) = __get_color_min_max(color_hex, tolerance)
-    print("Calling cv2.inRange with values: matrix=%s, min_val=%s, max_val=%s"
-          % (str(matrix), str(min_val), str(max_val)))
+    # print("Calling cv2.inRange with values: matrix=%s, min_val=%s, max_val=%s"
+    #       % (str(matrix), str(min_val), str(max_val)))
     mask = cv2.inRange(matrix, min_val, max_val)
     return mask
 
@@ -192,3 +192,36 @@ def __color_check(color=None):
 
 def __get_color_index(color):
     return list(set([0, 1, 2]) - set(COLOR_DICT[color])).pop()
+
+
+def get_height_width(rect):
+    """
+    Get height and width of a rectangle
+
+    Parameters
+    ----------
+    rect :
+        (top_left, top_right, bottom_right, bottom_left)
+
+    Returns
+    -------
+    (max_height, max_width)
+    """
+    # Compute the Width of the new image
+    (top_left, top_right, bottom_right, bottom_left) = rect
+    width1 = np.sqrt(((bottom_right[0] - bottom_left[0]) ** 2) +
+                     ((bottom_right[1] - bottom_left[1]) ** 2))
+    width2 = np.sqrt(((top_right[0] - top_left[0]) ** 2) +
+                     ((top_right[1] - top_left[1]) ** 2))
+
+    # Compute the Height of the new image
+    height1 = np.sqrt(((top_right[0] - bottom_right[0]) ** 2) +
+                      ((top_right[1] - bottom_right[1]) ** 2))
+    height2 = np.sqrt(((top_left[0] - bottom_left[0]) ** 2) +
+                      ((top_left[1] - bottom_left[1]) ** 2))
+
+    # Determine final dimensions
+    max_height = max(int(height1), int(height2))
+    max_width = max(int(width1), int(width2))
+
+    return (max_height, max_width)
