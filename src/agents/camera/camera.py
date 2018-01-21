@@ -12,6 +12,7 @@ import json
 import numpy as np
 import subprocess
 import threading
+import time
 import zmq
 
 from functools import reduce
@@ -270,7 +271,17 @@ class Camera(MessagingAgent):
         # while True:
         #     _, frame = feed.read()
         #     print "Frame Mean: %f" % np.mean(frame)
-        pass
+
+        # 1. Change Exposure settings until we have a perspective lock
+        # 2. Change zoom level until the edges of the perspective
+        #    are near the edge of the frame
+        self.calibration_thread = threading.Thread(
+            target=self._calibrate_camera)
+
+    def _calibrate_camera(self):
+        while not self.perspective:
+            self.set_exposure(self.get_exposuure - 25)
+            time.sleep(3.0)
 
     def _warp_frame(self, frame, perspective):
         '''
