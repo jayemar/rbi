@@ -8,6 +8,7 @@ from agent import MessagingAgent
 
 import arrow
 import cv2
+import json
 import numpy as np
 import subprocess
 import threading
@@ -47,6 +48,7 @@ class Camera(MessagingAgent):
         super(Camera, self).__init__(publish_port=PUBLISH_PORT,
                                      reply_port=REPLY_PORT)
         self.perspective = None
+        self.__initialize_camera()
         self.frame_mask = DEFAULT_MASK
         self.feed = cv2.VideoCapture(device_num)
         self.is_debug = False
@@ -54,6 +56,12 @@ class Camera(MessagingAgent):
         # self.debug_thread = threading.Thread(
         #     target=self.debug_reader.show_frames, args=[self.is_debug])
         # self.debug_reader.show_frames(enabled=self.is_debug)
+
+    def __initialize_camera(self):
+        with open('./camera.cfg', 'r') as phil:
+            initial_config = json.load(phil)
+        for k, v in initial_config:
+            self.__uvc(k, v)
 
     def __del__(self):
         """
@@ -171,12 +179,6 @@ class Camera(MessagingAgent):
             except KeyboardInterrupt:
                 self.is_active = False
 
-    def get_zoom(self):
-        return self.__uvc("Zoom, Absolute").strip()
-
-    def set_zoom(self, b):
-        self.__uvc("Zoom, Absolute", b)
-
     def get_brightness(self):
         return self.__uvc("Brightness").strip()
 
@@ -189,11 +191,12 @@ class Camera(MessagingAgent):
     def set_contrast(self, b):
         self.__uvc("Contrast", b)
 
-    def get_saturation(self):
-        return self.__uvc("Saturation").strip()
+    def get_exposuure(self):
+        return self.__uvc("Exposure (Absolute)").strip()
 
-    def set_saturation(self, b):
-        self.__uvc("Saturation", b)
+    def set_exposure(self, b):
+        self.__uvc("Exposure, Auto", 1)
+        self.__uvc("Exposure (Absolute)", b)
 
     def get_focus(self):
         return self.__uvc("Focus (absolute)").strip()
@@ -205,11 +208,23 @@ class Camera(MessagingAgent):
     def auto_focus(self):
         self.__uvc("Focus, Auto", 1)
 
+    def get_saturation(self):
+        return self.__uvc("Saturation").strip()
+
+    def set_saturation(self, b):
+        self.__uvc("Saturation", b)
+
     def get_sharpness(self):
         return self.__uvc("Sharpness").strip()
 
     def set_sharpness(self, b):
         self.__uvc("Sharpness", b)
+
+    def get_zoom(self):
+        return self.__uvc("Zoom, Absolute").strip()
+
+    def set_zoom(self, b):
+        self.__uvc("Zoom, Absolute", b)
 
     def __uvc(self, cmd, val=None):
         if val:
