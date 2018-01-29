@@ -16,6 +16,10 @@ import time
 import zmq
 
 from functools import reduce
+from os import path
+from pprint import pformat
+
+import pdb
 
 LOG_FILENAME = '/var/log/rbi/camera.log'
 PUBLISH_PORT = 5000
@@ -49,20 +53,25 @@ class Camera(MessagingAgent):
         super(Camera, self).__init__(publish_port=PUBLISH_PORT,
                                      reply_port=REPLY_PORT)
         self.perspective = None
-        self.__initialize_camera()
-        self.frame_mask = DEFAULT_MASK
         self.feed = cv2.VideoCapture(device_num)
-        self.is_debug = False
-        self.debug_reader = FrameReader()
+        self.is_debug = True
+        self.frame_mask = DEFAULT_MASK
+        self.debug_reader = FrameReader(enabled=self.is_debug)
         # self.debug_thread = threading.Thread(
         #     target=self.debug_reader.show_frames, args=[self.is_debug])
         # self.debug_reader.show_frames(enabled=self.is_debug)
+        self.__initialize_camera()
 
     def __initialize_camera(self):
-        with open('./camera.cfg', 'r') as phil:
+        with open(path.relpath('./camera.cfg'), 'r') as phil:
             initial_config = json.load(phil)
-        for k, v in initial_config:
-            self.__uvc(k, v)
+
+        self._log.debug(pformat(initial_config))
+        for k, v in initial_config.items():
+            time.sleep(0.250)
+            print("Setting %s to %d" % (k, v))
+            new_val = self.__uvc(k, v)
+            print("%s set to %s" % (k, str(new_val)))
 
     def __del__(self):
         """
@@ -85,15 +94,17 @@ class Camera(MessagingAgent):
         options = {'h or ?': "help; show these options",
                    'q': "quit/close agent",
                    'd': "toggle debug mode; display frames",
+                   'm': "frame mask",
                    't': "take screenshot of perspective view",
                    'r': "reset/recapture perspective",
+                   'l': "calibrate camera (Not Implemented)",
                    'z': "zoom",
                    'b': "brightness",
                    'c': "contrast",
+                   'e': "exposure",
                    's': "saturation",
                    'f': "focus",
-                   'p': "sharpness",
-                   'm': "frame mask"}
+                   'p': "sharpness"}
         if msg in ['h', '?']:
             self.replier.send_pyobj(options)
         elif msg == 'q':
@@ -116,12 +127,16 @@ class Camera(MessagingAgent):
         elif msg == 'r':
             self.perspective = []
             self.replier.send_pyobj("Perspective reset")
+        elif msg == 'l':
+            self.calibrate_camera()
         elif msg == 'z':
             self.replier.send_pyobj(self.get_zoom())
         elif msg == 'b':
             self.replier.send_pyobj(self.get_brightness())
         elif msg == 'c':
             self.replier.send_pyobj(self.get_contrast())
+        elif msg == 'e':
+            self.replier.send_pyobj(self.get_exposure())
         elif msg == 's':
             self.replier.send_pyobj(self.get_saturation())
         elif msg == 'f':
@@ -137,6 +152,8 @@ class Camera(MessagingAgent):
                 cmd = self.set_brightness
             elif msg.startswith('c'):
                 cmd = self.set_contrast
+            elif msg.startswith('e'):
+                cmd = self.set_exposure
             elif msg.startswith('s'):
                 cmd = self.set_saturation
             elif msg.startswith('f'):
@@ -168,6 +185,7 @@ class Camera(MessagingAgent):
                 frame_dict = dict()
                 if self.frame_mask & raw_mask:
                     frame_dict.update({'raw': frame})
+
                 if not self.perspective:
                     if self.frame_mask > 1:
                         contours = self._get_perspective(frame)
@@ -184,48 +202,46 @@ class Camera(MessagingAgent):
         return self.__uvc("Brightness").strip()
 
     def set_brightness(self, b):
-        self.__uvc("Brightness", b)
+        return self.__uvc("Brightness", b)
 
     def get_contrast(self):
         return self.__uvc("Contrast").strip()
 
     def set_contrast(self, b):
-        self.__uvc("Contrast", b)
+        return self.__uvc("Contrast", b)
 
-    def get_exposuure(self):
+    def get_exposure(self):
         return self.__uvc("Exposure (Absolute)").strip()
 
     def set_exposure(self, b):
-        self.__uvc("Exposure, Auto", 1)
-        self.__uvc("Exposure (Absolute)", b)
+        return self.__uvc("Exposure (Absolute)", b)
 
     def get_focus(self):
         return self.__uvc("Focus (absolute)").strip()
 
     def set_focus(self, b):
-        self.__uvc("Focus, Auto", 0)
-        self.__uvc("Focus (absolute)", b)
+        return self.__uvc("Focus (absolute)", b)
 
     def auto_focus(self):
-        self.__uvc("Focus, Auto", 1)
+        return self.__uvc("Focus, Auto", 1)
 
     def get_saturation(self):
         return self.__uvc("Saturation").strip()
 
     def set_saturation(self, b):
-        self.__uvc("Saturation", b)
+        return self.__uvc("Saturation", b)
 
     def get_sharpness(self):
         return self.__uvc("Sharpness").strip()
 
     def set_sharpness(self, b):
-        self.__uvc("Sharpness", b)
+        return self.__uvc("Sharpness", b)
 
     def get_zoom(self):
         return self.__uvc("Zoom, Absolute").strip()
 
     def set_zoom(self, b):
-        self.__uvc("Zoom, Absolute", b)
+        return self.__uvc("Zoom, Absolute", b)
 
     def __uvc(self, cmd, val=None):
         if val:
@@ -271,6 +287,7 @@ class Camera(MessagingAgent):
         # while True:
         #     _, frame = feed.read()
         #     print "Frame Mean: %f" % np.mean(frame)
+        self._log.info("Inside calibrate_camera")
 
         # 1. Change Exposure settings until we have a perspective lock
         # 2. Change zoom level until the edges of the perspective
@@ -279,9 +296,14 @@ class Camera(MessagingAgent):
             target=self._calibrate_camera)
 
     def _calibrate_camera(self):
-        while not self.perspective:
-            self.set_exposure(self.get_exposuure - 25)
-            time.sleep(3.0)
+        # self._log.info("Inside _calibrate_camera")
+        # while not self.perspective:
+            # new_exposure = self.get_exposure() - 25
+            # self._log.info("Setting exposure to %d" % new_exposure)
+            # self.set_exposure(new_exposure)
+            # time.sleep(3.0)
+        # self._log.info("Perspective found; leaving _calibrate_camera")
+        pass
 
     def _warp_frame(self, frame, perspective):
         '''
@@ -438,7 +460,7 @@ class Camera(MessagingAgent):
         try:
             msg = tmp_subscriber.recv_pyobj()
             img_time = str(arrow.utcnow().timestamp)
-            img_name = 'reader_screenshot_{0}.tif'.format(img_time)
+            img_name = 'reader_screenshot_{0}.png'.format(img_time)
             # img_path = '../images/screenshots/' + img_name
             img_path = img_name
             if 'warped' in msg:
