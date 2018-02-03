@@ -11,3 +11,6 @@ h5py
 arrow
 tornado
 pyzmq
+pillow
+pytesseract
+pyenchant

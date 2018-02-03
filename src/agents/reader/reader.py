@@ -7,8 +7,13 @@ from agent import MessagingAgent
 
 import arrow
 import cv2
+import numpy as np
 import threading
 import zmq
+
+import pdb
+
+from PIL import ImageOps
 
 PUBLISH_PORT = 5004
 REPLY_PORT = 5005
@@ -21,7 +26,7 @@ class Reader(MessagingAgent):
         super(Reader, self).__init__(publish_port=PUBLISH_PORT,
                                      reply_port=REPLY_PORT)
         self.receiving_frames = True
-        self.display_frames = True
+        self.display_frames = False
         self.threshold = BW_THRESHOLD
         self._create_camera_subscriber_thread()
 
@@ -48,16 +53,21 @@ class Reader(MessagingAgent):
             if self.display_frames and 'warped' in msg:
                 frame = self._preprocess_frame(msg.get('warped'),
                                                threshold=self.threshold)
-                cv2.imshow("Reader View", msg.get('warped'))
+                cv2.imshow("Reader View", frame)
                 cv2.waitKey(1) & 0xFF
+            else:
+                cv2.destroyAllWindows()
 
     def _preprocess_frame(self, frame, threshold=0.5):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        frame[frame > (255.0 * threshold)] = 255.0
-        frame[frame < 255.0] = 0.0
+        frame[frame > (255.0 * threshold)] = 255
+        frame[frame < 255.0] = 0
+        frame = frame ^ 255
+        # return ImageOps.invert(frame)
         return frame
 
     def _take_screenshot(self):
+        AVG_FRAMES = 5
         success = False
         tmp_subscriber = self.ctx.socket(zmq.SUB)
         tmp_subscriber.connect('tcp://localhost:%s'
@@ -65,16 +75,25 @@ class Reader(MessagingAgent):
         tmp_subscriber.setsockopt(zmq.SUBSCRIBE, b'')
         try:
             msg = tmp_subscriber.recv_pyobj()
+            if 'warped' not in msg:
+                raise Exception("Unable to find warped frame")
+
+            frames = list()
+            for i in range(AVG_FRAMES):
+                msg = tmp_subscriber.recv_pyobj()
+                frames.append(msg.get('warped'))
+            pdb.set_trace()
+            frame = np.mean(frames, axis=0).astype('uint8')
+
             img_time = str(arrow.utcnow().timestamp)
             img_name = 'reader_screenshot_{0}.png'.format(img_time)
             # img_path = '../images/screenshots/' + img_name
             img_path = img_name
-            if 'warped' in msg:
-                cv2.imwrite(img_path, msg.get('warped'),
-                            (cv2.IMWRITE_PNG_COMPRESSION, 0))
-                success = True
-                self._log.info("Image saved to %s" % img_path)
-                print("Image saved to %s" % img_path)
+            frame = self._preprocess_frame(frame)
+            cv2.imwrite(img_path, frame, (cv2.IMWRITE_PNG_COMPRESSION, 0))
+            success = True
+            self._log.info("Image saved to %s" % img_path)
+            print("Image saved to %s" % img_path)
         finally:
             tmp_subscriber.close()
         return success
@@ -93,6 +112,8 @@ class Reader(MessagingAgent):
             self.is_active = False
             self.replier.send_pyobj("Command received to close %s" % self.name)
         elif msg == 'r':
+            self.replier.send_pyobj("Option 'r' not currently available for Reader agent")
+            '''
             # XOR with True acts to toggle value
             self.receiving_frames = self.receiving_frames ^ True
             if self.receiving_frames:
@@ -102,6 +123,7 @@ class Reader(MessagingAgent):
                 self.replier.send_pyobj("Disabling Camera frame subscriber")
                 self.camera_subscriber_thread.join(timeout=2.0)
                 cv2.destroyAllWindows()
+            '''
         elif msg == 'd':
             self.display_frames = self.display_frames ^ True
             self.replier.send_pyobj("Displaying frames: %s"

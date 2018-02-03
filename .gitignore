@@ -3,6 +3,7 @@ notebooks/lib/__pycache__/
 src/*.swp
 src/*.~
 src/lib/__pycache__/
+src/agents/*/__pycache__/
 src/*.pyc
 src/*.png
 src/lib/*.swp
