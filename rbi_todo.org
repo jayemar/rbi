@@ -7,10 +7,18 @@
 ** Camera
 *** Calibration
 **** TODO Calibrate to better detect field of play
+
+Important properties include:
+- Exposure (Absolute)
+- Gain
+- Brightness
+- Zoom, Absolute
 **** TODO Run calibration function on button push
 
 ** Arduino
 *** Indicators
+
+Purchased 24-channel PWM LED driver and rotary encoders from Adafruit.
 **** TODO Light LEDs to show number of balls
 **** TODO Light LEDs to show number of strikes
 **** TODO Light LEDs to show number of outs
@@ -30,6 +38,9 @@
 **** TODO Throw the ball to a base
 **** TODO Throw a runner out at first
 *** Text Reader
+    Tesseract could be useful for detecting letters
+    Enchant (pyenchant) looks promising as a dictionary/spellchecker
+    Probably want to box off areas expecting text so Tesseract isn't trying to make letters from nothing
 **** TODO Recognize when work popup appears in middle of screen
 **** TODO Recognize different words in screen popup
 **** TODO Recognize run(s) scored
